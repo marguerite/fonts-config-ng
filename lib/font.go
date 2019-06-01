@@ -1,9 +1,10 @@
-package font
+package lib
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/marguerite/util/slice"
+	"os"
 	"os/exec"
 	"reflect"
 	"regexp"
@@ -19,8 +20,8 @@ type Style struct {
 	Slant  int
 }
 
-// Get font width/weight/slant
-func (s *Style) Get(fontFile string) {
+// Load font width/weight/slant
+func (s *Style) Load(fontFile string) {
 	raw, _ := exec.Command("/usr/bin/fc-scan", fontFile).Output()
 	widthR := regexp.MustCompile(`(?m)width:\s(\d+)`)
 	weightR := regexp.MustCompile(`(?m)weight:\s(\d+)`)
@@ -147,8 +148,8 @@ func fixFontName(s *string) {
 	fixWQYFont(s)
 }
 
-// GetName get font name
-func GetName(fontFile string) []string {
+// GetFontName get font name
+func GetFontName(fontFile string) []string {
 	out, _ := exec.Command("/usr/bin/fc-scan", "--format", "%{family}", fontFile).Output()
 	names := string(out)
 	fixFontName(&names)
@@ -165,8 +166,8 @@ func GetName(fontFile string) []string {
 	return []string{names}
 }
 
-// GetLang get font languages
-func GetLang(fontFile string) []string {
+// GetFontLang get font languages
+func GetFontLang(fontFile string) []string {
 	langs, _ := exec.Command("/usr/bin/fc-scan", "--format", "%{lang}", fontFile).Output()
 	if strings.Contains(string(langs), "|") {
 		s := strings.Split(string(langs), "|")
@@ -178,7 +179,7 @@ func GetLang(fontFile string) []string {
 // ParseFontInfoFromFile read various font infos with fc-scan
 func ParseFontInfoFromFile(ttf string) Font {
 	ok, _ := Hinting(ttf)
-	return Font{GetName(ttf), GetLang(ttf), ok}
+	return Font{GetFontName(ttf), GetFontLang(ttf), ok}
 }
 
 // GenericFamily find generic name through font name
@@ -266,7 +267,7 @@ func extractCharsetRange(s string) []string {
 	// 3 loops of a same charset. the break point is not "-7e", but "20-7e",
 	// which is the begin char of the next loop
 	// eg: fc-scan --format "%{charset}" /usr/share/fonts/truetype/wqy-zenhei.ttc
-	re := regexp.MustCompile(`^(\w+)-(\w+)(20-7e)?$`)
+	re := regexp.MustCompile(`^(\w+)-(\w+)(20-7[0-9a-f])?$`)
 	m := re.FindStringSubmatch(s)
 	start, _ := strconv.ParseInt(m[1], 16, 0)
 	stop, _ := strconv.ParseInt(m[2], 16, 0)
@@ -300,13 +301,24 @@ func substractChar(c1, c2 string) int64 {
 
 // BuildCharset build charset array of a font
 func BuildCharset(f string) Charset {
-	out, _ := exec.Command("/usr/bin/fc-scan", "--format", "%{charset}", f).Output()
-	return createPlainCharset(strings.Split(string(out), " "))
+	if _, err := os.Stat(f); !os.IsNotExist(err) {
+		out, e := exec.Command("/usr/bin/fc-scan", "--format", "%{charset}", f).Output()
+		ErrChk(e)
+		return createPlainCharset(strings.Split(string(out), " "))
+	}
+	return Charset{}
 }
 
 // BuildEmojiCharset build charset array of a emoji font
-func BuildEmojiCharset(f string) Charset {
-	charset := BuildCharset(f)
+func BuildEmojiCharset(f []string) Charset {
+	charset := Charset{}
+
+	for _, v := range f {
+		slice.Concat(&charset, BuildCharset(v))
+	}
+
+	slice.Unique(&charset)
+
 	/* common emojis that almost every font has
 	   "#","*","0","1","2","3","4","5","6","7","8","9","©","®","™"," ",
 	   "‼","↔","↕","↖","↗","↘","↙","▪","▫","☀","⁉","ℹ",

@@ -16,3 +16,10 @@ func debug(verbosity int, level int, text string) {
 		fmt.Printf(text)
 	}
 }
+
+// ErrChk panic at error
+func ErrChk(e error) {
+	if e != nil {
+		panic(e)
+	}
+}

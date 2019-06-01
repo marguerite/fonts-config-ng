@@ -4,13 +4,10 @@ LIBEXECDIR = /usr/lib
 SYSCONFDIR = /etc
 CONF = $(patsubst conf.d/%, %, $(wildcard conf.d/*.conf))
 
-all: fonts-config blacklist_emoji_glyph generate_noto_info generate_noto_config generate_cjk_config
+all: fonts-config generate_noto_info generate_noto_config generate_cjk_config
 
 fonts-config: cmd/fonts-config.go
 	env GO15VENDOREXPERIMENT=1 go build cmd/fonts-config.go
-
-blacklist_emoji_glyph:  tool/blacklist_emoji_glyph.go
-	env GO15VENDOREXPERIMENT=1 go build tool/blacklist_emoji_glyph.go
 
 generate_noto_info: tool/generate_noto_info.go
 	env GO15VENDOREXPERIMENT=1 go build tool/generate_noto_info.go
@@ -29,7 +26,6 @@ install: all
 	mkdir -p $(DESTDIR)$(SYSCONFDIR)/fonts/conf.d
 	mkdir -p $(DESTDIR)$(PREFIX)/share/fillup-templates
 	install -m 0755 fonts-config $(DESTDIR)$(PREFIX)/sbin
-	install -m 0755 blacklist_emoji_glyph $(DESTDIR)$(LIBEXECDIR)/fonts-config
 	install -m 0755 generate_noto_info $(DESTDIR)$(LIBEXECDIR)/fonts-config
 	install -m 0755 generate_noto_config $(DESTDIR)$(LIBEXECDIR)/fonts-config
 	install -m 0755 generate_cjk_config $(DESTDIR)$(LIBEXECDIR)/fonts-config

@@ -2,18 +2,12 @@ package main
 
 import (
 	"github.com/marguerite/util/fileutils"
-	"github.com/openSUSE/fonts-config/font"
+	"github.com/openSUSE/fonts-config/lib"
 	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
 )
-
-func errChk(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
 
 type fplByMethod struct {
 	Prefer map[string][]string
@@ -294,8 +288,8 @@ func main() {
 	cjk += generateHinting(list, "hintfull")
 
 	for _, f := range list {
-		defaultFamilyCJK += font.GenerateDefaultFamily(f)
-		ttGroupCJK += font.GenerateFontTypeByHinting(font.Font{[]string{f}, []string{}, true})
+		defaultFamilyCJK += lib.GenerateDefaultFamily(f)
+		ttGroupCJK += lib.GenerateFontTypeByHinting(lib.Font{[]string{f}, []string{}, true})
 	}
 
 	cjk += "</fontconfig>"
@@ -303,9 +297,9 @@ func main() {
 	ttGroupCJK += "</fontconfig>"
 
 	err := ioutil.WriteFile("59-family-prefer-lang-specific-cjk.conf", []byte(cjk), 0644)
-	errChk(err)
+	lib.ErrChk(err)
 	err = ioutil.WriteFile("10-group-tt-hinted-cjk.conf", []byte(ttGroupCJK), 0644)
-	errChk(err)
+	lib.ErrChk(err)
 	err = ioutil.WriteFile("49-family-default-cjk.conf", []byte(defaultFamilyCJK), 0644)
-	errChk(err)
+	lib.ErrChk(err)
 }

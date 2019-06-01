@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/marguerite/util/dirutils"
 	"github.com/marguerite/util/fileutils"
-	"github.com/openSUSE/fonts-config/font"
+	"github.com/openSUSE/fonts-config/lib"
 	"io"
 	"io/ioutil"
 	"os"
@@ -36,7 +36,7 @@ func main() {
 	flag.StringVar(&pkgDir, "pkgdir", filepath.Join(os.Getenv("HOME"), "binaries"), "the pkgdir contains rpm packages for fonts.")
 	flag.Parse()
 
-	collection := font.Collection{}
+	collection := lib.Collection{}
 	notoFonts := []string{}
 	re := regexp.MustCompile(`([^\/]+)-fonts.*$`)
 	wg := &sync.WaitGroup{}
@@ -71,7 +71,7 @@ func main() {
 			fontFiles, _ := filepath.Glob(filepath.Join(privateDir, "usr/share/fonts/truetype/*"))
 
 			for _, ttf := range fontFiles {
-				n := font.ParseFontInfoFromFile(ttf)
+				n := lib.ParseFontInfoFromFile(ttf)
 				mux.Lock()
 				collection = append(collection, n)
 				mux.Unlock()

@@ -23,6 +23,7 @@ type Options struct {
 	UseRgba                    string
 	UseEmbeddedBitmaps         bool
 	EmbeddedBitmapsLanguages   string
+	SystemEmojis               string
 	PreferSansFamilies         string
 	PreferSerifFamilies        string
 	PreferMonoFamilies         string
@@ -150,7 +151,7 @@ func parseBool(b bool) string {
 // generatePresetOptions generate a default Options
 func generatePresetOptions() Options {
 	return Options{0, "none", false, false, false, "lcddefault", "rgb", true,
-		"ja:ko:zh-CN:zh-SG:zh-TW:zh-HK:zh-MO", "", "", "", true, false,
+		"ja:ko:zh-CN:zh-SG:zh-TW:zh-HK:zh-MO", "Noto Color Emoji", "", "", "", true, false,
 		false, true}
 }
 

@@ -1,4 +1,4 @@
-package font
+package lib
 
 import (
 	"github.com/golang/freetype"

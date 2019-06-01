@@ -13,12 +13,6 @@ import (
 // Version fonts-config's version
 const Version string = "20190208"
 
-func errChk(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
 func removeUserSetting(prefix string, verbosity int) error {
 	for _, f := range []string{
 		filepath.Join(prefix, "fontconfig/fonts-config"),
@@ -53,7 +47,7 @@ func yastInfo() {
 
 func main() {
 	var userMode, remove, force, ttcap, enableJava, quiet, verbose, debug, autohint, bw, bwMono, ebitmaps, info bool
-	var hintstyle, lcdfilter, rgba, ebitmapsLang string
+	var hintstyle, lcdfilter, rgba, ebitmapsLang, emojis string
 
 	cli.VersionFlag = cli.BoolFlag{
 		Name:  "version",
@@ -141,6 +135,12 @@ func main() {
 			Usage:       "Argument contains a `list` of colon separated languages, for example \"ja:ko:zh-CN\" which means \"use embedded bitmaps only for fonts supporting Japanese, Korean, or Simplified Chinese.",
 			Destination: &ebitmapsLang,
 		},
+		cli.StringFlag{
+			Name:        "emojis",
+			Value:       "Noto Color Emoji",
+			Usage:       "Default emoji fonts. for example\"Noto Color Emoji:Twemoji Mozilla\", glyphs from these fonts will be blacklisted for other non-emoji fonts",
+			Destination: &emojis,
+		},
 		cli.BoolTFlag{
 			Name:        "ttcap",
 			Usage:       "Generate TTCap entries..",
@@ -183,11 +183,11 @@ func main() {
 
 		userPrefix := filepath.Join(os.Getenv("HOME"), ".config")
 
-		options := lib.Options{verbosity, hintstyle, autohint, bw, bwMono, lcdfilter, rgba, ebitmaps, ebitmapsLang, "", "", "", true, false, ttcap, enableJava}
+		options := lib.Options{verbosity, hintstyle, autohint, bw, bwMono, lcdfilter, rgba, ebitmaps, ebitmapsLang, "Noto Color Emoji", "", "", "", true, false, ttcap, enableJava}
 
 		if remove {
 			err := removeUserSetting(userPrefix, verbosity)
-			errChk(err)
+			lib.ErrChk(err)
 			os.Exit(0)
 		}
 
@@ -220,7 +220,7 @@ func main() {
 
 		if !userMode {
 			err := lib.MkFontScaleDir(config, force)
-			errChk(err)
+			lib.ErrChk(err)
 		}
 
 		/*	# The following two calls may change files in /etc/fonts, therefore
@@ -229,10 +229,13 @@ func main() {
 			# will think that the cache files are out of date again. */
 
 		err := lib.GenerateDefaultRenderingOptions(userMode, config)
-		errChk(err)
+		lib.ErrChk(err)
 
 		err = lib.GenerateFamilyPreferenceLists(userMode, config)
-		errChk(err)
+		lib.ErrChk(err)
+
+		err = lib.GenerateEmojiBlacklist(userMode, config)
+		lib.ErrChk(err)
 
 		if !userMode {
 			lib.FcCache(config.Verbosity)
