@@ -15,27 +15,27 @@ func generateBitmapLanguagesConfig(opts Options) string {
 	if opts.UseEmbeddedBitmaps {
 		if opts.EmbeddedBitmapsLanguages == "no" || len(opts.EmbeddedBitmapsLanguages) == 0 {
 			tmp := "\t<match target=\"font\">\n"
-			tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"assign\">\n"
+			tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"append\">\n"
 			tmp += "\t\t\t<b>true</bool>\n"
 			tmp += "\t\t</edit>\n"
 			tmp += "\t</match>\n"
 			return tmp
 		}
 		tmp := "\t<match target=\"font\">\n"
-		tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"assign\">\n"
+		tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"append\">\n"
 		tmp += "\t\t\t<bool>false</bool>\n"
 		tmp += "\t\t</edit>\n"
 		tmp += "\t</match>\n"
 		for _, v := range strings.Split(opts.EmbeddedBitmapsLanguages, ":") {
 			tmp += "\t<match target=\"font\">\n"
 			tmp += "\t\t<test name=\"lang\" compare=\"contains\"><string>" + v + "</string></test>\n"
-			tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"assign\"><bool>true</bool></edit>\n"
+			tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"append\"><bool>true</bool></edit>\n"
 			tmp += "\t</match>\n"
 		}
 		return tmp
 	}
 	tmp := "\t<match target=\"font\">\n"
-	tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"assign\">\n"
+	tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"append\">\n"
 	tmp += "\t\t\t<bool>false</bool>\n"
 	tmp += "\t\t</edit>\n"
 	tmp += "\t</match>\n"

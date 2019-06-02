@@ -9,7 +9,7 @@
 
 <fontconfig>
 	<!-- Choose prefered common hinting style here.  -->
-        <!-- Possible values: no, hitnone, hitslight, hintmedium and hintfull. -->
+  <!-- Possible values: no, hitnone, hitslight, hintmedium and hintfull. -->
 	<!-- Can be overriden with some other options, e. g. force_bw
 	     or force_bw_monospace => hintfull -->
 	<match target="pattern" >
@@ -19,7 +19,7 @@
 	</match>
 
 	<!-- Force autohint always. -->
-        <!-- If false, for well hinted fonts, their instructions are used for rendering. -->
+  <!-- If false, for well hinted fonts, their instructions are used for rendering. -->
 	<match target="pattern">
 		<edit name="force_autohint" mode="assign">
 			<bool>_FORCE_AUTOHINT_PLACEHOLDER_</bool>
@@ -40,31 +40,30 @@
 		</edit>
 	</match>
 
-        <!-- Set LCD filter. Amend when you want use subpixel rendering. -->
-        <!-- Don't forgot to set correct subpixel ordering in 'rgba' element. -->
-        <!-- Possible values: lcddefault, lcdlight, lcdlegacy, lcdnone -->
+  <!-- Set LCD filter. Amend when you want use subpixel rendering. -->
+  <!-- Don't forgot to set correct subpixel ordering in 'rgba' element. -->
+  <!-- Possible values: lcddefault, lcdlight, lcdlegacy, lcdnone -->
 	<match target="pattern">
-		<edit name="lcdfilter" mode="assign">
+		<edit name="lcdfilter" mode="append">
 			<const>_USE_LCDFILTER_PLACEHOLDER_</const>
 		</edit>
 	</match>
-        <!-- Set LCD subpixel arrangement and orientation.  -->
-        <!-- Possible values: unknown, none, rgb, bgr, vrgb, vbgr. -->
+  <!-- Set LCD subpixel arrangement and orientation.  -->
+  <!-- Possible values: unknown, none, rgb, bgr, vrgb, vbgr. -->
 	<match target="pattern">
-		<edit name="rgba" mode="assign">
+		<edit name="rgba" mode="append">
 			<const>_USE_RGBA_PLACEHOLDER_</const>
 		</edit>
 	</match>
 
-        _USE_EMBEDDED_BITMAPS_PLACEHOLDER_
+  _USE_EMBEDDED_BITMAPS_PLACEHOLDER_
 
-        <!-- Search for metric compatible families? -->
+  <!-- Search for metric compatible families? -->
 	<match target="pattern" >
-		<edit name="search_metric_aliases" mode="assign">
+		<edit name="search_metric_aliases" mode="append">
 			<bool>_METRIC_ALIASES_PLACEHOLDER_</bool>
 		</edit>
 	</match>
 
-        _INCLUDE_USER_RENDERING_PLACEHOLDER_
+  _INCLUDE_USER_RENDERING_PLACEHOLDER_
 </fontconfig>
-
