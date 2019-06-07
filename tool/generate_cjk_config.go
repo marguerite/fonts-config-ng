@@ -111,6 +111,10 @@ func generatePrefer(font string, family map[string][]string, langSpecific map[st
 			s += "\t\t\t<string>Noto Sans</string>\n"
 		}
 
+		if font == "serif" {
+			s += "\t\t\t<string>Noto Serif</string>\n"
+		}
+
 		s += "\t\t\t<string>" + family[editLang][0] + "</string>\n"
 
 		if font != "monospace" {
@@ -190,9 +194,6 @@ func generateSourceHanAlias(fonts []string, sans, serif, mono map[string][]strin
 		str := "\t<alias>\n\t\t<family>" + f + "</family>\n"
 
 		if fileutils.HasPrefixSuffixInGroup(lang, regionSuffix, false) {
-			if variant == "Sans" {
-				str += "\t\t<prefer>\n\t\t\t<family>Noto Sans</family>\n\t\t</prefer>\n"
-			}
 			str += "\t\t<accept>\n\t\t\t<family>" + familyMap[variant] + "</family>\n\t\t</accept>\n"
 		}
 
@@ -201,9 +202,6 @@ func generateSourceHanAlias(fonts []string, sans, serif, mono map[string][]strin
 				str += "\t\t<accept>\n"
 			} else {
 				str += "\t\t<prefer>\n"
-			}
-			if variant == "Sans" {
-				str += "\t\t\t<family>Noto Sans</family>\n"
 			}
 			str += "\t\t\t<family>" + familyMap[variant] + "</family>\n"
 			for _, r := range remainMap[variant] {
@@ -279,8 +277,11 @@ func main() {
 	ttGroupCJK := cjk
 
 	cjk += generateMatrix("Noto Sans", matrix, namelangs)
+	cjk += generateMatrix("Noto Serif", matrix, namelangs)
 	cjk += generateWeight("Noto Sans", weights, namelangs)
+	cjk += generateWeight("Noto Serif", weights, namelangs)
 	cjk += generateWidth("Noto Sans", widths, namelangs)
+	cjk += generateWidth("Noto Serif", widths, namelangs)
 	cjk += generatePrefer("sans-serif", sans, langSpecific, langs)
 	cjk += generatePrefer("serif", serif, langSpecific, langs)
 	cjk += generatePrefer("monospace", mono, langSpecific, langs)
