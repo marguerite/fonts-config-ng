@@ -153,7 +153,7 @@ func GenerateDefaultRenderingOptions(userMode bool, opts Options) error {
 	renderFile := ""
 
 	if userMode {
-		renderFile = filepath.Join(os.Getenv("HOME"), "/.config/fontconfig/rendering-options.conf")
+		renderFile = filepath.Join(GetEnv("HOME"), "/.config/fontconfig/rendering-options.conf")
 		err := dirutils.MkdirP(renderFile, opts.Verbosity)
 		if err != nil {
 			return err

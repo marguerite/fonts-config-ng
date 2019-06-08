@@ -27,7 +27,7 @@ func FcCache(verbosity int) {
 func FpRehash(verbosity int) {
 	if cmd, ok := command.Search("/usr/bin/xset", verbosity); ok {
 		re := regexp.MustCompile(`^:\d.*$`)
-		if re.MatchString(os.Getenv("DISPLAY")) {
+		if re.MatchString(GetEnv("DISPLAY")) {
 			cmdOpts := []string{"fp", "rehash"}
 			debug(verbosity, VerbosityVerbose, "Rereading the font databases in the current font path ...\n")
 			debug(verbosity, VerbosityDebug, "--- running xset fp rehash\n")

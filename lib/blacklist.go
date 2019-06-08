@@ -156,7 +156,7 @@ func GenerateEmojiBlacklist(userMode bool, opts Options) error {
 
 	blacklistFile := filepath.Join("/etc/fonts/conf.d/81-emoji-blacklist-glyphs.conf")
 	if userMode {
-		blacklistFile = filepath.Join(os.Getenv("HOME"), ".config/fontconfig/emoji-blacklist-glyphs.conf")
+		blacklistFile = filepath.Join(GetEnv("HOME"), ".config/fontconfig/emoji-blacklist-glyphs.conf")
 	}
 
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("blacklist file location: %s\n", blacklistFile))

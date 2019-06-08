@@ -248,6 +248,4 @@ GENERATE_JAVA_FONT_SETUP="yes"
 # Colon-separated list of Emoji fonts to be used globally.
 # Glyphs from these emojis will be blacklisted for other non-emoji fonts.
 #
-# Empty string means 'system default'.
-#
 SYSTEM_EMOJIS="Noto Color Emoji"

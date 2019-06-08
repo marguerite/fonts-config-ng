@@ -89,7 +89,7 @@ func (opt *Options) Merge(dst Options) {
 func (opt Options) Write(userMode bool) error {
 	dst := "/etc/sysconfig/fonts-config"
 	if userMode {
-		dst = filepath.Join(os.Getenv("HOME"), ".config/fontconfig/fonts-config")
+		dst = filepath.Join(GetEnv("HOME"), ".config/fontconfig/fonts-config")
 	}
 
 	text := ""

@@ -33,7 +33,7 @@ func unpackRPM(rpm, dst string) {
 
 func main() {
 	var pkgDir string
-	flag.StringVar(&pkgDir, "pkgdir", filepath.Join(os.Getenv("HOME"), "binaries"), "the pkgdir contains rpm packages for fonts.")
+	flag.StringVar(&pkgDir, "pkgdir", filepath.Join(lib.GetEnv("HOME"), "binaries"), "the pkgdir contains rpm packages for fonts.")
 	flag.Parse()
 
 	collection := lib.Collection{}

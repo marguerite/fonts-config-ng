@@ -32,7 +32,7 @@ func mkMetricCompatibility(avail string, userMode bool) (string, error) {
 		if strings.Contains(line, "<!DOCTYPE ") {
 			metric += "\n<!-- DO NOT EDIT; this is a generated file -->\n<!-- modify "
 			if userMode {
-				metric += filepath.Join(os.Getenv("HOME") + ".config/fontconfig/fonts-config")
+				metric += filepath.Join(GetEnv("HOME") + ".config/fontconfig/fonts-config")
 			} else {
 				metric += "/etc/sysconfig/fonts-config"
 			}
@@ -131,7 +131,7 @@ func GenerateFamilyPreferenceLists(userMode bool, opts Options) error {
 	fplFile := ""
 
 	if userMode {
-		fplFile = filepath.Join(os.Getenv("HOME"), ".config/fontconfig/family-prefer.conf")
+		fplFile = filepath.Join(GetEnv("HOME"), ".config/fontconfig/family-prefer.conf")
 		err := dirutils.MkdirP(fplFile, opts.Verbosity)
 		if err != nil {
 			return err
@@ -153,7 +153,7 @@ func GenerateFamilyPreferenceLists(userMode bool, opts Options) error {
 	fplText := "<?xml version=\"1.0\"?>\n<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n\n" +
 		"<!-- DO NOT EDIT; this is a generated file -->\n<!-- modify "
 	if userMode {
-		fplText += filepath.Join(os.Getenv("HOME") + ".config/fontconfig/fonts-config")
+		fplText += filepath.Join(GetEnv("HOME") + ".config/fontconfig/fonts-config")
 	} else {
 		fplText += "/etc/sysconfig/fonts-config"
 	}

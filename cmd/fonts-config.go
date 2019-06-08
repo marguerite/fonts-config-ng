@@ -11,7 +11,7 @@ import (
 )
 
 // Version fonts-config's version
-const Version string = "20190208"
+const Version string = "20190608"
 
 func removeUserSetting(prefix string, verbosity int) error {
 	for _, f := range []string{
@@ -181,7 +181,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		userPrefix := filepath.Join(os.Getenv("HOME"), ".config")
+		userPrefix := filepath.Join(lib.GetEnv("HOME"), ".config")
 
 		options := lib.Options{verbosity, hintstyle, autohint, bw, bwMono, lcdfilter, rgba, ebitmaps, ebitmapsLang, "Noto Color Emoji", "", "", "", true, false, ttcap, enableJava}
 
@@ -202,7 +202,7 @@ func main() {
 
 		if verbosity >= lib.VerbosityDebug {
 			if userMode {
-				fmt.Printf("USER mode (%s)\n", os.Getenv("USER"))
+				fmt.Printf("USER mode (%s)\n", lib.GetEnv("USER"))
 			} else {
 				fmt.Println("SYSTEM mode")
 			}
