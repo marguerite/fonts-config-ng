@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/marguerite/util/fileutils"
 	"github.com/openSUSE/fonts-config/lib"
@@ -8,6 +9,8 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"reflect"
+	"unsafe"
 )
 
 // Version fonts-config's version
@@ -192,7 +195,24 @@ func main() {
 			config = lib.LoadOptions(filepath.Join(userPrefix, "fontconfig/fonts-config"), config)
 		}
 
-		// need to new which option was passed through by command line
+		// need to know which option was passed through by command line
+
+		// read and dump private field "flagSet" of *cli.Context
+		flagSet := reflect.ValueOf(c).Elem().FieldByName("flagSet")
+		// make it readable
+		flagSet = reflect.NewAt(flagSet.Type(), unsafe.Pointer(flagSet.UnsafeAddr())).Elem()
+
+		cliFlags := &flag.FlagSet{}
+		if f, ok := flagSet.Interface().(*flag.FlagSet); ok {
+			cliFlags = f
+		}
+
+		passed := []string{}
+		cliFlags.Visit(func(f *flag.Flag) {
+			passed = append(passed, f.Name)
+		})
+
+		fmt.Println(passed)
 		config.Merge(options)
 		config.Bounce()
 		config.Write(userMode)
