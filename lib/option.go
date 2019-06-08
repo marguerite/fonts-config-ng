@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/marguerite/util/fileutils"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -51,7 +50,7 @@ func (opt Options) FindByName(name string) interface{} {
 }
 
 // Bounce Options to string
-func (opt Options) Bounce() string {
+func (opt Options) Bounce() {
 	vo := reflect.ValueOf(opt)
 	str := ""
 	for i := 0; i < vo.NumField(); i++ {
@@ -59,7 +58,7 @@ func (opt Options) Bounce() string {
 		value := vo.Field(i)
 		str += fmt.Sprintf("%s=%v\n", name, value)
 	}
-	return str
+	fmt.Println(str)
 }
 
 // Merge two Options
@@ -150,9 +149,9 @@ func parseBool(b bool) string {
 
 // generatePresetOptions generate a default Options
 func generatePresetOptions() Options {
-	return Options{0, "none", false, false, false, "lcddefault", "rgb", true,
-		"ja:ko:zh-CN:zh-SG:zh-TW:zh-HK:zh-MO", "Noto Color Emoji", "", "", "", true, false,
-		false, true}
+	return Options{0, "", false, false, false, "", "", false,
+		"", "", "", "", "", false, false,
+		false, false}
 }
 
 func convertSysconfigEntryToOptionName(s string) string {

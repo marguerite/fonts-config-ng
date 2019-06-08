@@ -93,8 +93,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:        "force-hintstyle",
-			Value:       "hintslight",
-			Usage:       "Which `hintstyle` to use: hintfull, hintmedium, hintslight or hintnone.",
+			Usage:       "Which 'hintstyle' to enforce globally: hintfull, hintmedium, hintslight or hintnone.",
 			Destination: &hintstyle,
 		},
 		cli.BoolFlag{
@@ -114,39 +113,35 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:        "lcdfilter",
-			Value:       "lcddefault",
 			Usage:       "Which `lcdfilter` to use: lcdnone, lcddefault, lcdlight, lcdlegacy.",
 			Destination: &lcdfilter,
 		},
 		cli.StringFlag{
 			Name:        "rgba",
-			Value:       "rgb",
 			Usage:       "Which `subpixel arrangement` your monitor use: none, rgb, vrgb, bgr, vbgr, unknown.",
 			Destination: &rgba,
 		},
-		cli.BoolTFlag{
+		cli.BoolFlag{
 			Name:        "ebitmaps",
 			Usage:       "Whether to use embedded bitmaps or not",
 			Destination: &ebitmaps,
 		},
 		cli.StringFlag{
 			Name:        "ebitmapslang",
-			Value:       "ja:ko:zh-CN:zh-SG:zh-TW:zh-HK:zh-MO",
 			Usage:       "Argument contains a `list` of colon separated languages, for example \"ja:ko:zh-CN\" which means \"use embedded bitmaps only for fonts supporting Japanese, Korean, or Simplified Chinese.",
 			Destination: &ebitmapsLang,
 		},
 		cli.StringFlag{
 			Name:        "emojis",
-			Value:       "Noto Color Emoji",
-			Usage:       "Default emoji fonts. for example\"Noto Color Emoji:Twemoji Mozilla\", glyphs from these fonts will be blacklisted for other non-emoji fonts",
+			Usage:       "Default emoji fonts. for example\"Noto Color Emoji:Twemoji Mozilla\", glyphs from these fonts will be blacklisted in other non-emoji fonts",
 			Destination: &emojis,
 		},
-		cli.BoolTFlag{
+		cli.BoolFlag{
 			Name:        "ttcap",
 			Usage:       "Generate TTCap entries..",
 			Destination: &ttcap,
 		},
-		cli.BoolTFlag{
+		cli.BoolFlag{
 			Name:        "java",
 			Usage:       "Generate font setup for Java.",
 			Destination: &enableJava,
@@ -183,7 +178,7 @@ func main() {
 
 		userPrefix := filepath.Join(lib.GetEnv("HOME"), ".config")
 
-		options := lib.Options{verbosity, hintstyle, autohint, bw, bwMono, lcdfilter, rgba, ebitmaps, ebitmapsLang, "Noto Color Emoji", "", "", "", true, false, ttcap, enableJava}
+		options := lib.Options{verbosity, hintstyle, autohint, bw, bwMono, lcdfilter, rgba, ebitmaps, ebitmapsLang, emojis, "", "", "", false, false, ttcap, enableJava}
 
 		if remove {
 			err := removeUserSetting(userPrefix, verbosity)
@@ -197,7 +192,9 @@ func main() {
 			config = lib.LoadOptions(filepath.Join(userPrefix, "fontconfig/fonts-config"), config)
 		}
 
+		// need to new which option was passed through by command line
 		config.Merge(options)
+		config.Bounce()
 		config.Write(userMode)
 
 		if verbosity >= lib.VerbosityDebug {
@@ -214,7 +211,7 @@ func main() {
 				fmt.Printf(")\n")
 			}
 
-			fmt.Printf(config.Bounce())
+			config.Bounce()
 			fmt.Println("---")
 		}
 

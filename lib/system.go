@@ -3,7 +3,6 @@ package lib
 import (
 	"fmt"
 	"github.com/marguerite/util/command"
-	"os"
 	"regexp"
 	"strings"
 )

@@ -6,7 +6,6 @@ import (
 	"github.com/marguerite/util/fileutils"
 	"github.com/marguerite/util/slice"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
