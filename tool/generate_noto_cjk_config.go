@@ -276,6 +276,18 @@ func main() {
 	defaultFamilyCJK := cjk
 	ttGroupCJK := cjk
 
+	cjk += "<!--- Currently we use Region Specific Subset OpenType/CFF (Subset OTF)\n"
+	cjk += "\tflavor of Google's Noto Sans/Serif CJK fonts, but previously we\n"
+	cjk += "\tused Super OpenType/CFF Collection (Super OTC), and other distributions\n"
+	cjk += "\tmay use Language specific OpenType/CFF (OTF) flavor. So\n"
+	cjk += "\tNoto Sans/Serif CJK SC/TC/JP/KR are also common font names.-->\n\n"
+	cjk += "<!--- fontconfig doesn't support the OpenType locl GSUB feature,\n"
+	cjk += "\tso only the default glyph variant (JP) can be used in the\n"
+	cjk += "\tSuper OTC and OTF flavors. We gave them very low priority\n"
+	cjk += "\ton openSUSE even if they were installed manually.-->\n\n"
+	cjk += "<!--- 1. Prepend 'Noto Sans/Serif' before CJK because the Latin part is from\n"
+	cjk += "\t\t'Adobe Source Sans/Serif Pro' which is 2/3 smaller than Noto.-->\n"
+
 	cjk += generateMatrix("Noto Sans", matrix, namelangs)
 	cjk += generateMatrix("Noto Serif", matrix, namelangs)
 	cjk += generateWeight("Noto Sans", weights, namelangs)
@@ -284,8 +296,16 @@ func main() {
 	cjk += generateWidth("Noto Serif", widths, namelangs)
 	cjk += generatePrefer("sans-serif", sans, langSpecific, langs)
 	cjk += generatePrefer("serif", serif, langSpecific, langs)
+
+	cjk += "<!--- 2. Don't prepend for Mono because its Latin part 'Adobe Source Code Pro'\n"
+	cjk += "\t\tis openSUSE's choice for monospace font.\n"
+	cjk += "\t3. 'Noto Sans Mono CJK XX' is real font in openSUSE.-->\n"
 	cjk += generatePrefer("monospace", mono, langSpecific, langs)
+
+	cjk += "<!--- 4. Alias 'Adobe Source Sans/Serif/HW' because they are the same as Noto.\n"
+	cjk += "\t\tIf installed manually they can still be used.-->\n"
 	cjk += generateSourceHanAlias(buildSourceHanFontsList(), sans, serif, mono)
+
 	cjk += generateHinting(list, "hintfull")
 
 	for _, f := range list {
