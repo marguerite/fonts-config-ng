@@ -13,7 +13,7 @@ import (
 	"sync"
 )
 
-func readFontFilesFromDir(d string, emoji bool) []string {
+func ReadFontFilesFromDir(d string, emoji bool) []string {
 	files, _ := dirutils.Ls(d, "file")
 	fonts := []string{}
 
@@ -61,7 +61,7 @@ func appendBlacklist(b EnhancedFonts, f EnhancedFont) EnhancedFonts {
 }
 
 func getEmojiFontFilesByName(emojis string) []string {
-	emojiFonts := readFontFilesFromDir("/usr/share/fonts/truetype", true)
+	emojiFonts := ReadFontFilesFromDir("/usr/share/fonts/truetype", true)
 	matched := []string{}
 	m := make(map[string]string)
 	for _, v := range emojiFonts {
@@ -82,7 +82,7 @@ func getEmojiFontFilesByName(emojis string) []string {
 
 // GenerateEmojiBlacklist generate 81-emoji-blacklist-glyphs.conf
 func GenerateEmojiBlacklist(userMode bool, opts Options) error {
-	nonEmojiFonts := readFontFilesFromDir("/usr/share/fonts/truetype", false)
+	nonEmojiFonts := ReadFontFilesFromDir("/usr/share/fonts/truetype", false)
 	emojiFonts := getEmojiFontFilesByName(opts.SystemEmojis)
 	emojiCharset := BuildEmojiCharset(emojiFonts)
 
