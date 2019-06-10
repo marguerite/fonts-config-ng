@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/marguerite/util/fileutils"
 	"github.com/openSUSE/fonts-config/lib"
@@ -8,6 +9,9 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"reflect"
+	"strings"
+	"unsafe"
 )
 
 // Version fonts-config's version
@@ -43,6 +47,27 @@ func yastInfo() {
 		"  rendering config template: /usr/share/fonts-config/10-rendering-options.conf.template\n" +
 		"  sysconfig file: /etc/sysconfig/fonts-config\n" +
 		"  user rendering config: fontconfig/rendering-options.conf\n")
+}
+
+// cliFlagsRltPos relative positions of flags set by cli
+func cliFlagsRltPos(c *cli.Context) []int {
+	rp := []int{}
+
+	// read and dump private field "flagSet" of *cli.Context
+	flagSet := reflect.ValueOf(c).Elem().FieldByName("flagSet")
+	// make it readable
+	flagSet = reflect.NewAt(flagSet.Type(), unsafe.Pointer(flagSet.UnsafeAddr())).Elem()
+	cliFlags, _ := flagSet.Interface().(*flag.FlagSet)
+
+	for i, v := range c.App.Flags[6:16] {
+		name := v.GetName()
+		cliFlags.Visit(func(f *flag.Flag) {
+			if strings.Split(name, ",")[0] == f.Name {
+				rp = append(rp, i+6)
+			}
+		})
+	}
+	return rp
 }
 
 func main() {
@@ -192,7 +217,7 @@ func main() {
 			config = lib.LoadOptions(filepath.Join(userPrefix, "fontconfig/fonts-config"), config)
 		}
 
-		// need to new which option was passed through by command line
+		fmt.Println(cliFlagsRltPos(c))
 		config.Merge(options)
 		config.Bounce()
 		config.Write(userMode)
