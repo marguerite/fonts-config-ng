@@ -3,6 +3,7 @@ package lib
 import (
 	"fmt"
 	"github.com/marguerite/util/fileutils"
+	"github.com/marguerite/util/slice"
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
@@ -50,7 +51,7 @@ func (opt Options) FindByName(name string) interface{} {
 }
 
 // Bounce Options to string
-func (opt Options) Bounce() {
+func (opt Options) Bounce() string {
 	vo := reflect.ValueOf(opt)
 	str := ""
 	for i := 0; i < vo.NumField(); i++ {
@@ -58,15 +59,20 @@ func (opt Options) Bounce() {
 		value := vo.Field(i)
 		str += fmt.Sprintf("%s=%v\n", name, value)
 	}
-	fmt.Println(str)
+	return str
 }
 
-// Merge two Options
-func (opt *Options) Merge(dst Options) {
+// Merge two Options, []int indicates which option was modified.
+func (opt *Options) Merge(dst Options, idx []int) {
 	vs := reflect.ValueOf(opt)
 	vd := reflect.ValueOf(dst)
 
 	for i := 0; i < vd.NumField(); i++ {
+		ok, _ := slice.Contains(idx, i)
+		// not modified, skip
+		if !ok {
+			continue
+		}
 		name := vd.Type().Field(i).Name
 		sv := reflect.Indirect(vs).FieldByName(name)
 		if !reflect.DeepEqual(vd.Field(i).Interface(), sv.Interface()) {

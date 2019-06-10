@@ -35,6 +35,6 @@ func GetEnv(env string) string {
 // ErrChk panic at error
 func ErrChk(e error) {
 	if e != nil {
-		panic(e)
+		log.Fatal(e)
 	}
 }

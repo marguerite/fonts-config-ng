@@ -1,3 +1,2 @@
-1. which option was passed through by command line?
-2. rewrite options.Merge
 3. guard option, reject null/commented/not valid option.
+4. eliminate errChk.

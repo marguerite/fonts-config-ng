@@ -4,8 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/marguerite/util/fileutils"
+	"github.com/marguerite/util/slice"
 	"github.com/openSUSE/fonts-config/lib"
 	"github.com/urfave/cli"
+	"log"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -23,7 +25,7 @@ func removeUserSetting(prefix string, verbosity int) error {
 		filepath.Join(prefix, "fontconfig/rendering-options.conf"),
 		filepath.Join(prefix, "fontconfig/family-prefer.conf"),
 	} {
-		err := fileutils.Remove(f, lib.VerbosityDebug)
+		err := fileutils.Remove(f, verbosity)
 		if err != nil {
 			return err
 		}
@@ -49,7 +51,7 @@ func yastInfo() {
 		"  user rendering config: fontconfig/rendering-options.conf\n")
 }
 
-// cliFlagsRltPos relative positions of flags set by cli
+// cliFlagsRltPos return relative positions in Options for flags set by cli
 func cliFlagsRltPos(c *cli.Context) []int {
 	rp := []int{}
 
@@ -59,20 +61,40 @@ func cliFlagsRltPos(c *cli.Context) []int {
 	flagSet = reflect.NewAt(flagSet.Type(), unsafe.Pointer(flagSet.UnsafeAddr())).Elem()
 	cliFlags, _ := flagSet.Interface().(*flag.FlagSet)
 
-	for i, v := range c.App.Flags[6:16] {
+	// check verbosity
+	cliFlags.Visit(func(f *flag.Flag) {
+		ok, _ := slice.Contains([]string{"quiet", "verbose", "debug"}, f.Name)
+		if ok {
+			rp = append(rp, 0)
+		}
+	})
+
+	// check all other options
+	for i, v := range c.App.Flags[6:22] {
 		name := v.GetName()
 		cliFlags.Visit(func(f *flag.Flag) {
 			if strings.Split(name, ",")[0] == f.Name {
-				rp = append(rp, i+6)
+				rp = append(rp, i+1) // the verbosity
 			}
 		})
 	}
 	return rp
 }
 
+// verbosityLevel decide the verbosity level
+func verbosityLevel(quiet, verbose, debug bool) int {
+	m := map[bool]int{quiet: lib.VerbosityQuiet, verbose: lib.VerbosityVerbose, debug: lib.VerbosityDebug}
+	for k, v := range m {
+		if k {
+			return v
+		}
+	}
+	return 0
+}
+
 func main() {
-	var userMode, remove, force, ttcap, enableJava, quiet, verbose, debug, autohint, bw, bwMono, ebitmaps, info bool
-	var hintstyle, lcdfilter, rgba, ebitmapsLang, emojis string
+	var userMode, remove, force, ttcap, enableJava, quiet, verbose, debug, autohint, bw, bwMono, ebitmaps, info, metric, forceFPL bool
+	var hintstyle, lcdfilter, rgba, ebitmapsLang, emojis, preferredSans, preferredSerif, preferredMono string
 
 	cli.VersionFlag = cli.BoolFlag{
 		Name:  "version",
@@ -161,6 +183,31 @@ func main() {
 			Usage:       "Default emoji fonts. for example\"Noto Color Emoji:Twemoji Mozilla\", glyphs from these fonts will be blacklisted in other non-emoji fonts",
 			Destination: &emojis,
 		},
+		cli.StringFlag{
+			Name:        "sans-serif",
+			Usage:       "Global preferred sans-serif families, separated by colon, which overrides any existing preference list, eg: \"Noto Sans SC:Noto Sans JP\".",
+			Destination: &preferredSans,
+		},
+		cli.StringFlag{
+			Name:        "serif",
+			Usage:       "Global preferred serif families, separated by colon, which overrides any existing preference list, eg: \"Noto Serif SC:Noto Serif JP\".",
+			Destination: &preferredSerif,
+		},
+		cli.StringFlag{
+			Name:        "monospace",
+			Usage:       "Global preferred sans-serif families, separated by colon, which overrides any existing preference list, eg: \"Noto Sans Mono CJK SC:Noto Sans Mono CJK JP\".",
+			Destination: &preferredMono,
+		},
+		cli.BoolFlag{
+			Name:        "metriccompatible",
+			Usage:       "Use metric compatible fonts.",
+			Destination: &metric,
+		},
+		cli.BoolFlag{
+			Name:        "forceFPL",
+			Usage:       "Force Family preference list, use together with -sansSerif/-serif/-monospace.",
+			Destination: &forceFPL,
+		},
 		cli.BoolFlag{
 			Name:        "ttcap",
 			Usage:       "Generate TTCap entries..",
@@ -185,41 +232,42 @@ func main() {
 			os.Exit(0)
 		}
 
-		// parse verbosity
-		verbosity := 0
-		verbosityMap := map[bool]int{quiet: lib.VerbosityQuiet, verbose: lib.VerbosityVerbose, debug: lib.VerbosityDebug}
-		for k, v := range verbosityMap {
-			if k {
-				verbosity = v
-				break
-			}
-		}
-
 		currentUser, _ := user.Current()
 		if !userMode && currentUser.Uid != "0" && currentUser.Username != "root" {
-			fmt.Println("*** error: no root permissions; rerun with --user for user fontconfig setting.")
-			os.Exit(1)
+			log.Fatal("*** error: no root permissions; rerun with --user for user fontconfig setting.")
 		}
 
+		// parse verbosity
+		verbosity := verbosityLevel(quiet, verbose, debug)
 		userPrefix := filepath.Join(lib.GetEnv("HOME"), ".config")
-
-		options := lib.Options{verbosity, hintstyle, autohint, bw, bwMono, lcdfilter, rgba, ebitmaps, ebitmapsLang, emojis, "", "", "", false, false, ttcap, enableJava}
 
 		if remove {
 			err := removeUserSetting(userPrefix, verbosity)
-			lib.ErrChk(err)
+			if err != nil {
+				log.Fatalf("Can not remove configuration file: %s", err.Error())
+			}
 			os.Exit(0)
 		}
 
+		options := lib.Options{verbosity, hintstyle, autohint, bw, bwMono,
+			lcdfilter, rgba, ebitmaps, ebitmapsLang,
+			emojis, preferredSans, preferredSerif,
+			preferredMono, metric, forceFPL, ttcap, enableJava}
+
+		log.Printf("Command line options: %s\n", options.Bounce())
+
 		config := lib.LoadOptions("/etc/sysconfig/fonts-config", lib.Options{})
+
+		log.Printf("System options: %s\n", config.Bounce())
 
 		if userMode {
 			config = lib.LoadOptions(filepath.Join(userPrefix, "fontconfig/fonts-config"), config)
+			log.Printf("With user options prepended: %s\n", config.Bounce())
 		}
 
-		fmt.Println(cliFlagsRltPos(c))
-		config.Merge(options)
-		config.Bounce()
+		config.Merge(options, cliFlagsRltPos(c))
+		log.Printf("With command line options prepended: %s\n", config.Bounce())
+
 		config.Write(userMode)
 
 		if verbosity >= lib.VerbosityDebug {
@@ -236,7 +284,7 @@ func main() {
 				fmt.Printf(")\n")
 			}
 
-			config.Bounce()
+			fmt.Println(config.Bounce())
 			fmt.Println("---")
 		}
 
