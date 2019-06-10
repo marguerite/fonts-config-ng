@@ -256,19 +256,19 @@ func main() {
 
 		log.Printf("Command line options: %s\n", options.Bounce())
 
-		config := lib.LoadOptions("/etc/sysconfig/fonts-config", lib.Options{})
+		config := lib.LoadOptions(lib.FileOp("/etc/sysconfig/fonts-config"), lib.NewOptions())
 
 		log.Printf("System options: %s\n", config.Bounce())
 
 		if userMode {
-			config = lib.LoadOptions(filepath.Join(userPrefix, "fontconfig/fonts-config"), config)
+			config = lib.LoadOptions(lib.FileOp(filepath.Join(userPrefix, "fontconfig/fonts-config")), config)
 			log.Printf("With user options prepended: %s\n", config.Bounce())
 		}
 
 		config.Merge(options, cliFlagsRltPos(c))
 		log.Printf("With command line options prepended: %s\n", config.Bounce())
 
-		config.Write(userMode)
+		config.Write(lib.FileOp(lib.SysconfigLoc(userMode)), userMode)
 
 		if verbosity >= lib.VerbosityDebug {
 			if userMode {

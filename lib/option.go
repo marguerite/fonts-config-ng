@@ -1,11 +1,11 @@
 package lib
 
 import (
+	"bufio"
 	"fmt"
-	"github.com/marguerite/util/fileutils"
 	"github.com/marguerite/util/slice"
-	"io/ioutil"
-	"path/filepath"
+	"io"
+	"log"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -91,23 +91,17 @@ func (opt *Options) Merge(dst Options, idx []int) {
 }
 
 // Write Options to file
-func (opt Options) Write(userMode bool) error {
-	dst := "/etc/sysconfig/fonts-config"
-	if userMode {
-		dst = filepath.Join(GetEnv("HOME"), ".config/fontconfig/fonts-config")
-	}
-
+func (opt Options) Write(f io.ReadWriter, userMode bool) {
 	text := ""
 	re := regexp.MustCompile(`^([^#]+\w)="(.*)"$`)
-	f, err := ioutil.ReadFile(dst)
-	if err != nil {
-		return err
-	}
 
-	for _, line := range strings.Split(string(f), "\n") {
+	scanner := bufio.NewScanner(f)
+
+	for scanner.Scan() {
+		line := scanner.Text()
 		if re.MatchString(line) {
 			m := re.FindStringSubmatch(line)
-			ov := opt.FindByName(convertSysconfigEntryToOptionName(m[1]))
+			ov := opt.FindByName(optionNameFromSysconfig(m[1]))
 			str := ""
 
 			if v, ok := ov.(string); ok {
@@ -128,15 +122,14 @@ func (opt Options) Write(userMode bool) error {
 		}
 	}
 
-	// always make backup
-	fileutils.Copy(dst, dst+".bak")
-
-	err = ioutil.WriteFile(dst, []byte(text), 0644)
+	n, err := f.Write([]byte(text))
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 
-	return nil
+	if n != len(text) {
+		log.Fatal("failed to write data.")
+	}
 }
 
 func formatBool(s string) bool {
@@ -153,14 +146,14 @@ func parseBool(b bool) string {
 	return "no"
 }
 
-// generatePresetOptions generate a default Options
-func generatePresetOptions() Options {
+// NewOptions generate default Options
+func NewOptions() Options {
 	return Options{0, "", false, false, false, "", "", false,
 		"", "", "", "", "", false, false,
 		false, false}
 }
 
-func convertSysconfigEntryToOptionName(s string) string {
+func optionNameFromSysconfig(s string) string {
 	re := regexp.MustCompile(`(_|^)[[:lower:]]`)
 	s = strings.ToLower(s)
 	m := re.FindAllString(s, -1)
@@ -171,29 +164,22 @@ func convertSysconfigEntryToOptionName(s string) string {
 }
 
 // LoadOptions load options from config file
-func LoadOptions(conf string, opts Options) Options {
-	if opts == (Options{}) {
-		opts = generatePresetOptions()
-	}
-
-	f, e := ioutil.ReadFile(conf)
-	if e != nil {
-		fmt.Printf("NOTE: %s doesn't exist, using builtin defaults.\n", conf)
-		return opts
-	}
-
+func LoadOptions(conf io.ReadWriter, opts Options) Options {
 	re := regexp.MustCompile(`^(.*)="(.*)"$`)
-	reComment := regexp.MustCompile(`([^#]*)#?.*`)
+	reInlineComment := regexp.MustCompile(`([^#]*)#?.*`)
 
-	for _, line := range strings.Split(string(f), "\n") {
+	scanner := bufio.NewScanner(conf)
+
+	for scanner.Scan() {
+		line := scanner.Text()
 		if !strings.HasPrefix(line, "#") {
-			if reComment.MatchString(line) {
-				line = reComment.FindStringSubmatch(line)[1]
+			if reInlineComment.MatchString(line) {
+				line = reInlineComment.FindStringSubmatch(line)[1]
 			}
 			if re.MatchString(line) {
 				m := re.FindStringSubmatch(line)
 				v := reflect.ValueOf(&opts).Elem()
-				f := v.FieldByName(convertSysconfigEntryToOptionName(m[1]))
+				f := v.FieldByName(optionNameFromSysconfig(m[1]))
 				if f.IsValid() {
 					if f.CanSet() {
 						// skip empty value

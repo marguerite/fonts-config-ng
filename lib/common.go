@@ -2,8 +2,10 @@ package lib
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 // VerbosityDebug an interger to control verbose output
@@ -37,4 +39,21 @@ func ErrChk(e error) {
 	if e != nil {
 		log.Fatal(e)
 	}
+}
+
+// FileOp return an io.ReadWriter for futher r/w operations
+func FileOp(f string) io.ReadWriter {
+	op, e := os.Open(f)
+	if e != nil {
+		log.Fatalf("Cannot open %s: %s\n", f, e.Error())
+	}
+	return op
+}
+
+// SysconfigLoc get fonts-config sysconfig location
+func SysconfigLoc(userMode bool) string {
+	if userMode {
+		return filepath.Join(GetEnv("HOME"), ".config/fontconfig/fonts-config")
+	}
+	return "/etc/sysconfig/fonts-config"
 }
