@@ -164,7 +164,7 @@ func optionNameFromSysconfig(s string) string {
 }
 
 // LoadOptions load options from config file
-func LoadOptions(conf io.ReadWriter, opts Options) Options {
+func LoadOptions(conf io.Reader, opts Options) Options {
 	re := regexp.MustCompile(`^(.*)="(.*)"$`)
 	reInlineComment := regexp.MustCompile(`([^#]*)#?.*`)
 

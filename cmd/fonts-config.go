@@ -92,6 +92,39 @@ func verbosityLevel(quiet, verbose, debug bool) int {
 	return 0
 }
 
+func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
+	sys, err := os.Open(lib.SysconfigLoc(false))
+	if err != nil {
+		log.Fatalf("Can not load %s: %s\n", lib.SysconfigLoc(false), err.Error())
+	}
+	defer sys.Close()
+	sysConfig := lib.LoadOptions(sys, lib.NewOptions())
+	log.Printf("System Configuration: %s\n", sysConfig.Bounce())
+
+	if userMode {
+		user, err := os.Open(lib.SysconfigLoc(true))
+		if err != nil {
+			log.Fatalf("Can not load %s: %s\n", lib.SysconfigLoc(true), err.Error())
+		}
+		sysConfig = lib.LoadOptions(user, sysConfig)
+		user.Close()
+		log.Printf("With user configuration prepended: %s\n", sysConfig.Bounce())
+	}
+
+	sysConfig.Merge(opt, cliFlagsRltPos(c))
+	log.Printf("With command line configuration prepended: %s\n", sysConfig.Bounce())
+
+	user, err := os.OpenFile(lib.SysconfigLoc(userMode), os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		log.Fatalf("Can not load %s: %s\n", lib.SysconfigLoc(userMode), err.Error())
+	}
+	defer user.Close()
+
+	sysConfig.Write(user, userMode)
+
+	return sysConfig
+}
+
 func main() {
 	var userMode, remove, force, ttcap, enableJava, quiet, verbose, debug, autohint, bw, bwMono, ebitmaps, info, metric, forceFPL bool
 	var hintstyle, lcdfilter, rgba, ebitmapsLang, emojis, preferredSans, preferredSerif, preferredMono string
@@ -256,36 +289,23 @@ func main() {
 
 		log.Printf("Command line options: %s\n", options.Bounce())
 
-		config := lib.LoadOptions(lib.FileOp("/etc/sysconfig/fonts-config"), lib.NewOptions())
-
-		log.Printf("System options: %s\n", config.Bounce())
-
-		if userMode {
-			config = lib.LoadOptions(lib.FileOp(filepath.Join(userPrefix, "fontconfig/fonts-config")), config)
-			log.Printf("With user options prepended: %s\n", config.Bounce())
-		}
-
-		config.Merge(options, cliFlagsRltPos(c))
-		log.Printf("With command line options prepended: %s\n", config.Bounce())
-
-		config.Write(lib.FileOp(lib.SysconfigLoc(userMode)), userMode)
+		config := loadOptions(options, c, userMode)
 
 		if verbosity >= lib.VerbosityDebug {
 			if userMode {
-				fmt.Printf("USER mode (%s)\n", lib.GetEnv("USER"))
+				log.Printf("USER mode (%s)\n", lib.GetEnv("USER"))
 			} else {
-				fmt.Println("SYSTEM mode")
+				log.Println("SYSTEM mode")
 			}
 
-			fmt.Printf("--- sysconfig options (read from /etc/sysconfig/fonts-config")
+			text := "Sysconfig options (read from /etc/sysconfig/fonts-config"
 			if userMode {
-				fmt.Printf(", %s)\n", filepath.Join(userPrefix, "fontconfig/fonts-config"))
+				text += fmt.Sprintf(", %s)\n", lib.SysconfigLoc(userMode))
 			} else {
-				fmt.Printf(")\n")
+				text += ")\n"
 			}
-
-			fmt.Println(config.Bounce())
-			fmt.Println("---")
+			log.Println(text)
+			log.Println(config.Bounce())
 		}
 
 		if !userMode {
