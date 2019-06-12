@@ -66,41 +66,8 @@ func getPlaceholderType(line string) string {
 
 func parseRenderingTemplatePlaceholderInLine(line string, opts Options, userMode bool) string {
 	switch placeholder := getPlaceholderType(line); placeholder {
-	case "_FORCE_HINTSTYLE_PLACEHOLDER_":
-		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- forcing hintstyle: %s\n", opts.ForceHintstyle))
-		return strings.Replace(line, placeholder, opts.ForceHintstyle, 1) + "\n"
-	case "_FORCE_AUTOHINT_PLACEHOLDER_":
-		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- forcing autohint: %t\n", opts.ForceAutohint))
-		return strings.Replace(line, placeholder, fmt.Sprintf("%t", opts.ForceAutohint), 1) + "\n"
-	case "_FORCE_BW_PLACEHOLDER_":
-		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- forcing black and white: %t\n", opts.ForceBw))
-		return strings.Replace(line, placeholder, fmt.Sprintf("%t", opts.ForceBw), 1) + "\n"
-	case "_FORCE_BW_MONOSPACE_PLACEHOLDER_":
-		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("-- forcing black and white for good hinted monospace: %t\n", opts.ForceBwMonospace))
-		return strings.Replace(line, placeholder, fmt.Sprintf("%t", opts.ForceBwMonospace), 1) + "\n"
-	case "_USE_LCDFILTER_PLACEHOLDER_":
-		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- lcdfilter: %s\n", opts.UseLcdfilter))
-		return strings.Replace(line, placeholder, opts.UseLcdfilter, 1) + "\n"
-	case "_USE_RGBA_PLACEHOLDER_":
-		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- subpixel arrangement: %s\n", opts.UseRgba))
-		return strings.Replace(line, placeholder, opts.UseRgba, 1) + "\n"
 	case "_USE_EMBEDDED_BITMAPS_PLACEHOLDER_":
 		return generateBitmapLanguagesConfig(opts)
-	case "_SYSCONFIG_FILE_PLACEHOLDER_":
-		line = strings.Replace(line, placeholder, "/etc/sysconfig/fonts-config", 1)
-		if userMode {
-			line = strings.Replace(line, "_FONTSCONFIG_RUN_PLACEHOLDER_", "/usr/bin/fonts-config -\\-user", 1)
-		} else {
-			line = strings.Replace(line, "_FONTSCONFIG_RUN_PLACEHOLDER_", "/usr/bin/fonts-config", 1)
-		}
-		return line + "\n"
-	case "_METRIC_ALIASES_PLACEHOLDER_":
-		return strings.Replace(line, placeholder, fmt.Sprintf("%t", opts.SearchMetricCompatible), 1) + "\n"
-	case "_INCLUDE_USER_RENDERING_PLACEHOLDER_":
-		if !userMode {
-			// let user have a possiblity to override system settings
-			return strings.Replace(line, placeholder, "<include ignore_missing=\"yes\" prefix=\"xdg\">fontconfig/rendering-options.conf</include>", 1) + "\n"
-		}
 	default:
 	}
 	return line + "\n"
@@ -183,4 +150,104 @@ func GenerateDefaultRenderingOptions(userMode bool, opts Options) error {
 		return err
 	}
 	return nil
+}
+
+// ValidStringOption return false if a string is "null", has suffix "none" or just empty.
+func ValidStringOption(opt string) bool {
+	if len(opt) == 0 || opt == "null" || strings.HasSuffix(opt, "none") {
+		return false
+	}
+	return true
+}
+
+func renderingOptionsPreamble(userMode bool) string {
+	config := "<?xml version=\"1.0\"?>\n<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n\n<!-- DO NOT EDIT; this is a generated file -->\n<!-- modify "
+	config += SysconfigLoc(false)
+	config += " && run /usr/bin/fonts-config "
+	if userMode {
+		config += "-\\-user "
+	}
+	config += "instead. -->\n<!-- using target=\"pattern\", because we want to change pattern in 60-family-prefer.conf\n\tregarding to this setting -->\n\n<fontconfig>\n"
+	return config
+}
+
+func renderingOptionsForceHintstyle(opts Options) string {
+	if !ValidStringOption(opts.ForceHintstyle) {
+		return ""
+	}
+	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Forcing hintstyle: %s\n", opts.ForceHintstyle))
+	config += "<!-- Choose prefered common hinting style here.  -->\n<!-- Possible values: no, hitnone, hitslight, hintmedium and hintfull. -->\n<!-- Can be overriden with some other options, e. g. force_bw\n\tor force_bw_monospace => hintfull -->\n"
+	config += "\t<match target=\"pattern\" >\n\t\t<edit name=\"force_hintstyle\" mode=\"assign\">\n\t\t\t<string>"
+	config += opt.ForceHintstyle
+	config += "</string>\n\t\t</edit>\n\t</match>\n"
+	return config
+}
+
+func renderingOptionsForceAutohint(opts Options) string {
+	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Forcing autohint: %t\n", opts.ForceAutohint))
+	config += "<!-- Force autohint always. -->\n<!-- If false, for well hinted fonts, their instructions are used for rendering. -->\n"
+	config += "\t<match target=\"pattern\">\n\t\t<edit name=\"force_autohint\" mode=\"assign\">\n\t\t\t<bool>"
+	config += fmt.Sprintf("%t", opts.ForceAutohint)
+	config += "</bool>\n\t\t</edit>\n\t</match>\n"
+	return config
+}
+
+func renderingOptionsBlackAndWhite(opts Options) string {
+	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Forcing black and white: %t\n", opts.ForceBw))
+	config += "<!-- Do not use font smoothing (black&white rendering) at all.  -->\n"
+	config += "\t<match target=\"pattern\" >\n\t\t<edit name=\"force_bw\" mode=\"assign\">\n\t\t\t<bool>"
+	config += fmt.Sprintf("%t", opts.ForceBW)
+	config += "</bool>\n\t\t</edit>\t</match>\n"
+	return config
+}
+
+func renderingOptionsMonospaceBlackAndWhite(opts Options) string {
+	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Forcing black and white for good hinted monospace: %t\n", opts.ForceBwMonospace))
+	config += "<!-- Do not use font smoothing for some monospaced fonts.  -->\n<!-- Liberation Mono, Courier New, Andale Mono, Monaco, etc. -->\n"
+	config += "\t<match target=\"pattern\" >\t\t<edit name=\"force_bw_monospace\" mode=\"assign\">\n<bool>"
+	config += fmt.Sprintf("%t", opts.ForceBwMonospace)
+	config += "</bool>\n\t\t</edit>\n\t</match>\n"
+	return config
+}
+
+func renderingOptionsLcdfilter(opts Options) string {
+	if !ValidStringOption(opts.UseLcdfiler) {
+		return ""
+	}
+	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Lcdfilter: %s\n", opts.UseLcdfilter))
+	config += "<!-- Set LCD filter. Amend when you want use subpixel rendering. -->\n"
+	config += "<!-- Don't forgot to set correct subpixel ordering in 'rgba' element. -->\n"
+	config += "<!-- Possible values: lcddefault, lcdlight, lcdlegacy, lcdnone -->\n"
+	config += "\t<match target=\"pattern\">\t\t<edit name=\"lcdfilter\" mode=\"append\">\n\t\t\t<const>"
+	config += opts.UseLcdfiler
+	config += "</const>\n\t\t</edit>\n\t</match>\n"
+	return config
+}
+
+func renderingOptionsRGBA(opts Options) string {
+	if !ValidStringOption(opts.UseRgba) {
+		return ""
+	}
+	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Subpixel arrangement: %s\n", opts.UseRgba))
+	config += "<!-- Set LCD subpixel arrangement and orientation.  -->\n"
+	config += "<!-- Possible values: unknown, none, rgb, bgr, vrgb, vbgr. -->\n"
+	config += "\t<match target=\"pattern\">\n\t\t<edit name=\"rgba\" mode=\"append\">\n<const>"
+	config += opts.UseRgba
+	config += "</const>\n\t\t</edit>\n\t</match>\n"
+	return config
+}
+
+func renderingOptinsMetricCompatible(opts Options) string {
+	config += "<!-- Search for metric compatible families? -->\n"
+	config += "\t<match target=\"pattern\" >\n\t\t<edit name=\"search_metric_aliases\" mode=\"append\">\n<bool>"
+	config += fmt.Sprintf("%t", opts.SearchMetricCompatible)
+	config += "</bool>\n\t\t</edit>\n\t</match>\n"
+	return config
+}
+
+func renderingOptionsUserOption(userMode bool) string {
+	if userMode {
+		return "\t<include ignore_missing=\"yes\" prefix=\"xdg\">fontconfig/rendering-options.conf</include>\n"
+	}
+	return ""
 }

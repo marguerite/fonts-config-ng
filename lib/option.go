@@ -133,7 +133,7 @@ func (opt Options) Write(f io.ReadWriter, userMode bool) {
 }
 
 func formatBool(s string) bool {
-	if s == "yes" {
+	if strings.HasPrefix(strings.ToLower(s), "y") {
 		return true
 	}
 	return false

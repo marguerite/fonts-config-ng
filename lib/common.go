@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -18,7 +17,7 @@ const VerbosityQuiet int = 0
 
 func debug(verbosity int, level int, text string) {
 	if verbosity >= level {
-		fmt.Printf(text)
+		log.Println(text)
 	}
 }
 
