@@ -152,6 +152,11 @@ func GenerateDefaultRenderingOptions(userMode bool, opts Options) error {
 	return nil
 }
 
+func generateRenderingOptions(opts Options, userMode bool) string {
+	config := ConfigPreamble(userMode, "<!-- using target=\"pattern\", because we want to change pattern in 60-family-prefer.conf\n\tregarding to this setting -->\n")
+	config += 
+}
+
 // ValidStringOption return false if a string is "null", has suffix "none" or just empty.
 func ValidStringOption(opt string) bool {
 	if len(opt) == 0 || opt == "null" || strings.HasSuffix(opt, "none") {
@@ -160,18 +165,20 @@ func ValidStringOption(opt string) bool {
 	return true
 }
 
-func renderingOptionsPreamble(userMode bool) string {
+func ConfigPreamble(userMode bool, comment string) string {
 	config := "<?xml version=\"1.0\"?>\n<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n\n<!-- DO NOT EDIT; this is a generated file -->\n<!-- modify "
 	config += SysconfigLoc(false)
 	config += " && run /usr/bin/fonts-config "
 	if userMode {
 		config += "-\\-user "
 	}
-	config += "instead. -->\n<!-- using target=\"pattern\", because we want to change pattern in 60-family-prefer.conf\n\tregarding to this setting -->\n\n<fontconfig>\n"
+	config += "instead. -->\n"
+	config += comment
+	config += "\n<fontconfig>\n"
 	return config
 }
 
-func renderingOptionsForceHintstyle(opts Options) string {
+func renderingStringOption(verbosity int, opt, dbgOutput, comment, editName string, cst bool, opts Options) string {
 	if !ValidStringOption(opts.ForceHintstyle) {
 		return ""
 	}
