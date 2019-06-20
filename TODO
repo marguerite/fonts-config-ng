@@ -1,2 +1,2 @@
-3. guard option, reject null/commented/not valid option.
 4. eliminate errChk.
+5. sysconfig are empty

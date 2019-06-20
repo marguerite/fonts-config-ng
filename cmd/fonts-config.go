@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/marguerite/util/dirutils"
 	"github.com/marguerite/util/fileutils"
 	"github.com/marguerite/util/slice"
 	"github.com/openSUSE/fonts-config/lib"
@@ -20,10 +21,13 @@ import (
 const Version string = "20190608"
 
 func removeUserSetting(prefix string, verbosity int) error {
+	if len(prefix) == 0 {
+		return nil
+	}
 	for _, f := range []string{
-		filepath.Join(prefix, "fontconfig/fonts-config"),
-		filepath.Join(prefix, "fontconfig/rendering-options.conf"),
-		filepath.Join(prefix, "fontconfig/family-prefer.conf"),
+		filepath.Join(prefix, "fonts-config"),
+		filepath.Join(prefix, "rendering-options.conf"),
+		filepath.Join(prefix, "family-prefer.conf"),
 	} {
 		err := fileutils.Remove(f, verbosity)
 		if err != nil {
@@ -92,6 +96,18 @@ func verbosityLevel(quiet, verbose, debug bool) int {
 	return 0
 }
 
+func getUserPrefix(userMode bool, verbosity int) string {
+	if !userMode {
+		return ""
+	}
+	prefix := filepath.Join(lib.GetEnv("HOME"), ".config/fontconfig")
+	err := dirutils.MkdirP(prefix, verbosity)
+	if err != nil {
+		log.Fatalf("Can not create %s: %s\n", prefix, err.Error())
+	}
+	return prefix
+}
+
 func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
 	sys, err := os.Open(lib.SysconfigLoc(false))
 	if err != nil {
@@ -114,7 +130,7 @@ func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
 	sysConfig.Merge(opt, cliFlagsRltPos(c))
 	log.Printf("With command line configuration prepended: %s\n", sysConfig.Bounce())
 
-	user, err := os.OpenFile(lib.SysconfigLoc(userMode), os.O_RDWR|os.O_CREATE, 0644)
+	user, err := os.OpenFile(lib.SysconfigLoc(userMode), os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("Can not load %s: %s\n", lib.SysconfigLoc(userMode), err.Error())
 	}
@@ -272,7 +288,7 @@ func main() {
 
 		// parse verbosity
 		verbosity := verbosityLevel(quiet, verbose, debug)
-		userPrefix := filepath.Join(lib.GetEnv("HOME"), ".config")
+		userPrefix := getUserPrefix(userMode, verbosity)
 
 		if remove {
 			err := removeUserSetting(userPrefix, verbosity)
@@ -318,10 +334,9 @@ func main() {
 			# changed in /etc/fonts after calling fc-cache, fontconfig
 			# will think that the cache files are out of date again. */
 
-		err := lib.GenerateDefaultRenderingOptions(userMode, config)
-		lib.ErrChk(err)
+		lib.GenerateRenderingOptions(userMode, config)
 
-		err = lib.GenerateFamilyPreferenceLists(userMode, config)
+		err := lib.GenerateFamilyPreferenceLists(userMode, config)
 		lib.ErrChk(err)
 
 		err = lib.GenerateEmojiBlacklist(userMode, config)

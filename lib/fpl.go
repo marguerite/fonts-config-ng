@@ -150,18 +150,7 @@ func GenerateFamilyPreferenceLists(userMode bool, opts Options) error {
 
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- generating %s ---\n", fplFile))
 
-	fplText := "<?xml version=\"1.0\"?>\n<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n\n" +
-		"<!-- DO NOT EDIT; this is a generated file -->\n<!-- modify "
-	if userMode {
-		fplText += filepath.Join(GetEnv("HOME") + ".config/fontconfig/fonts-config")
-	} else {
-		fplText += "/etc/sysconfig/fonts-config"
-	}
-	fplText += " && run /usr/bin/fonts-config"
-	if userMode {
-		fplText += " -\\-user"
-	}
-	fplText += " instead. -->\n\n<fontconfig>\n"
+	fplText := configPreamble(userMode, "")
 
 	if userMode {
 		fplText += "\t<match target=\"pattern\">\n\t\t<edit name=\"user_preference_list\" mode=\"assign\">\n" +

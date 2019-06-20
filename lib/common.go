@@ -21,6 +21,7 @@ func debug(verbosity int, level int, text string) {
 	}
 }
 
+// GetEnv get system environment variable
 func GetEnv(env string) string {
 	val, ok := os.LookupEnv(env)
 	if !ok {
@@ -45,4 +46,12 @@ func SysconfigLoc(userMode bool) string {
 		return filepath.Join(GetEnv("HOME"), ".config/fontconfig/fonts-config")
 	}
 	return "/etc/sysconfig/fonts-config"
+}
+
+// RenderingOptionsLoc get rendering-options config location
+func RenderingOptionsLoc(userMode bool) string {
+	if userMode {
+		return filepath.Join(GetEnv("HOME"), ".config/fontconfig/rendering-options.conf")
+	}
+	return "/etc/fonts/conf.d/10-rendering-options.conf"
 }

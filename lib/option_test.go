@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-var opt Options = Options{0, "", false, false, false, "", "", false,
+var opt = Options{0, "", false, false, false, "", "", false,
 	"", "", "", "", "", false, false,
 	false, false}
 
