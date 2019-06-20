@@ -130,7 +130,7 @@ func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
 	sysConfig.Merge(opt, cliFlagsRltPos(c))
 	log.Printf("With command line configuration prepended: %s\n", sysConfig.Bounce())
 
-	user, err := os.OpenFile(lib.SysconfigLoc(userMode), os.O_RDWR|os.O_CREATE, 0644)
+	user, err := os.OpenFile(lib.SysconfigLoc(userMode), os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("Can not load %s: %s\n", lib.SysconfigLoc(userMode), err.Error())
 	}

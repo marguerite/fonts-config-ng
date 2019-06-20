@@ -67,7 +67,7 @@ func GenerateRenderingOptions(userMode bool, opts Options) {
 	/* # reflect fonts-config syconfig variables or
 	   # parameters in fontconfig setting to control rendering */
 	renderFile := RenderingOptionsLoc(userMode)
-	dat, err := os.OpenFile(renderFile, os.O_RDWR|os.O_CREATE, 0644)
+	dat, err := os.OpenFile(renderFile, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("Can not open %s: %s", renderFile, err.Error())
 	}
@@ -83,26 +83,26 @@ func generateRenderingOptions(opts Options, userMode bool) string {
 	config := ConfigPreamble(userMode, "<!-- using target=\"pattern\", because we want to change pattern in 60-family-prefer.conf\n\tregarding to this setting -->\n")
 	config += generateStringOptionConfig(opts.Verbosity, opts.ForceHintstyle, "Forcing hintstyle:",
 		"<!-- Choose prefered common hinting style here.  -->\n<!-- Possible values: no, hitnone, hitslight, hintmedium and hintfull. -->\n<!-- Can be overriden with some other options, e. g. force_bw\n\tor force_bw_monospace => hintfull -->\n",
-		"force_hintstyle", false)
+		"force_hintstyle", false, true)
 	config += generateBoolOptionConfig(opts.Verbosity, opts.ForceAutohint, "Forcing autohint:",
 		"<!-- Force autohint always. -->\n<!-- If false, for well hinted fonts, their instructions are used for rendering. -->\n",
-		"force_autohint")
+		"force_autohint", true)
 	config += generateBoolOptionConfig(opts.Verbosity, opts.ForceBw, "Forcing black and white:",
 		"<!-- Do not use font smoothing (black&white rendering) at all.  -->\n",
-		"force_bw")
+		"force_bw", true)
 	config += generateBoolOptionConfig(opts.Verbosity, opts.ForceBwMonospace, "Forcing black and white for good hinted monospace:",
 		"<!-- Do not use font smoothing for some monospaced fonts.  -->\n<!-- Liberation Mono, Courier New, Andale Mono, Monaco, etc. -->\n",
-		"force_bw_monospace")
+		"force_bw_monospace", true)
 	config += generateStringOptionConfig(opts.Verbosity, opts.UseLcdfilter, "Lcdfilter:",
 		"<!-- Set LCD filter. Amend when you want use subpixel rendering. -->\n<!-- Don't forgot to set correct subpixel ordering in 'rgba' element. -->\n<!-- Possible values: lcddefault, lcdlight, lcdlegacy, lcdnone -->\n",
-		"lcdfilter", true)
+		"lcdfilter", true, false)
 	config += generateStringOptionConfig(opts.Verbosity, opts.UseRgba, "Subpixel arrangement:",
 		"<!-- Set LCD subpixel arrangement and orientation.  -->\n<!-- Possible values: unknown, none, rgb, bgr, vrgb, vbgr. -->\n",
-		"rgba", true)
+		"rgba", true, false)
 	config += generateBitmapLanguagesConfig(opts)
 	config += generateBoolOptionConfig(opts.Verbosity, opts.SearchMetricCompatible, "Search metric compatible fonts:",
 		"<!-- Search for metric compatible families? -->\n",
-		"search_metric_aliases")
+		"search_metric_aliases", false)
 	config += generateUserInclude(userMode)
 	config += "</fontconfig>\n"
 	return config
@@ -130,7 +130,7 @@ func ConfigPreamble(userMode bool, comment string) string {
 	return config
 }
 
-func generateStringOptionConfig(verbosity int, opt, dbgOutput, comment, editName string, cst bool) string {
+func generateStringOptionConfig(verbosity int, opt, dbgOutput, comment, editName string, cst, force bool) string {
 	if !validStringOption(opt) {
 		return ""
 	}
@@ -138,7 +138,13 @@ func generateStringOptionConfig(verbosity int, opt, dbgOutput, comment, editName
 	config := comment
 	config += "\t<match target=\"pattern\" >\n\t\t<edit name=\""
 	config += editName
-	config += "\" mode=\"assign\">\n\t\t\t"
+	config += "\" mode=\""
+	if force {
+		config += "assign"
+	} else {
+		config += "append"
+	}
+	config += "\">\n\t\t\t"
 	if cst {
 		config += "<const>"
 	} else {
@@ -154,12 +160,18 @@ func generateStringOptionConfig(verbosity int, opt, dbgOutput, comment, editName
 	return config
 }
 
-func generateBoolOptionConfig(verbosity int, opt bool, dbgOutput, comment, editName string) string {
+func generateBoolOptionConfig(verbosity int, opt bool, dbgOutput, comment, editName string, force bool) string {
 	debug(verbosity, VerbosityDebug, fmt.Sprintf(dbgOutput+" %t\n", opt))
 	config := comment
 	config += "\t<match target=\"pattern\">\n\t\t<edit name=\""
 	config += editName
-	config += "\" mode=\"assign\">\n\t\t\t<bool>"
+	config += "\" mode=\""
+	if force {
+		config += "assign"
+	} else {
+		config += "append"
+	}
+	config += "\">\n\t\t\t<bool>"
 	config += fmt.Sprintf("%t", opt)
 	config += "</bool>\n\t\t</edit>\n\t</match>\n"
 	return config
