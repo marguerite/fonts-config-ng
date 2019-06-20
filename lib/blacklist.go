@@ -87,7 +87,7 @@ func GenerateEmojiBlacklist(userMode bool, opts Options) error {
 	emojiFonts := getEmojiFontFilesByName(opts.SystemEmojis)
 	emojiCharset := BuildEmojiCharset(emojiFonts)
 
-	emojiConf := configPreamble(userMode, "")
+	emojiConf := genConfigPreamble(userMode, "")
 
 	blacklist := EnhancedFonts{}
 

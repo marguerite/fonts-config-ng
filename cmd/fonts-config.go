@@ -130,15 +130,26 @@ func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
 	sysConfig.Merge(opt, cliFlagsRltPos(c))
 	log.Printf("With command line configuration prepended: %s\n", sysConfig.Bounce())
 
-	user, err := os.OpenFile(lib.SysconfigLoc(userMode), os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0644)
-	if err != nil {
-		log.Fatalf("Can not load %s: %s\n", lib.SysconfigLoc(userMode), err.Error())
-	}
-	defer user.Close()
-
-	sysConfig.Write(user, userMode)
+	writeOptions(sysConfig, userMode)
 
 	return sysConfig
+}
+
+func writeOptions(opt lib.Options, userMode bool) {
+	f, err := os.Open(lib.SysconfigLoc(userMode))
+	if err != nil {
+		log.Fatalf("Can't read from %s: %s.\n", lib.SysconfigLoc(userMode), err.Error())
+	}
+	config := opt.String(f)
+	f.Close()
+
+	f, err = os.OpenFile(lib.SysconfigLoc(userMode), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	if err != nil {
+		log.Fatalf("Can not open %s to write: %s.\n", lib.SysconfigLoc(userMode), err.Error())
+	}
+	defer f.Close()
+
+	lib.WriteOptions(f, config)
 }
 
 func main() {
@@ -334,7 +345,7 @@ func main() {
 			# changed in /etc/fonts after calling fc-cache, fontconfig
 			# will think that the cache files are out of date again. */
 
-		lib.GenerateRenderingOptions(userMode, config)
+		lib.GenRenderingOptions(userMode, config)
 
 		err := lib.GenerateFamilyPreferenceLists(userMode, config)
 		lib.ErrChk(err)

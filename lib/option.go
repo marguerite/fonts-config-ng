@@ -90,8 +90,8 @@ func (opt *Options) Merge(dst Options, idx []int) {
 	}
 }
 
-// Write Options to file
-func (opt Options) Write(f io.ReadWriter, userMode bool) {
+// String convert options to string with the help of template
+func (opt Options) String(f io.Reader) string {
 	text := ""
 	re := regexp.MustCompile(`^([^#]+\w)="(.*)"$`)
 
@@ -122,6 +122,11 @@ func (opt Options) Write(f io.ReadWriter, userMode bool) {
 		}
 	}
 
+	return text
+}
+
+// WriteOptions write options to file
+func WriteOptions(f io.Writer, text string) {
 	n, err := f.Write([]byte(text))
 	if err != nil {
 		log.Fatal(err)

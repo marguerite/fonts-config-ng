@@ -150,7 +150,7 @@ func GenerateFamilyPreferenceLists(userMode bool, opts Options) error {
 
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- generating %s ---\n", fplFile))
 
-	fplText := configPreamble(userMode, "")
+	fplText := genConfigPreamble(userMode, "")
 
 	if userMode {
 		fplText += "\t<match target=\"pattern\">\n\t\t<edit name=\"user_preference_list\" mode=\"assign\">\n" +
