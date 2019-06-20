@@ -80,7 +80,7 @@ func GenerateRenderingOptions(userMode bool, opts Options) {
 }
 
 func generateRenderingOptions(opts Options, userMode bool) string {
-	config := ConfigPreamble(userMode, "<!-- using target=\"pattern\", because we want to change pattern in 60-family-prefer.conf\n\tregarding to this setting -->\n")
+	config := configPreamble(userMode, "<!-- using target=\"pattern\", because we want to change pattern in 60-family-prefer.conf\n\tregarding to this setting -->\n")
 	config += generateStringOptionConfig(opts.Verbosity, opts.ForceHintstyle, "Forcing hintstyle:",
 		"<!-- Choose prefered common hinting style here.  -->\n<!-- Possible values: no, hitnone, hitslight, hintmedium and hintfull. -->\n<!-- Can be overriden with some other options, e. g. force_bw\n\tor force_bw_monospace => hintfull -->\n",
 		"force_hintstyle", false, true)
@@ -116,8 +116,8 @@ func validStringOption(opt string) bool {
 	return true
 }
 
-// ConfigPreamble generate fontconfig preamble
-func ConfigPreamble(userMode bool, comment string) string {
+// configPreamble generate fontconfig preamble
+func configPreamble(userMode bool, comment string) string {
 	config := "<?xml version=\"1.0\"?>\n<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n\n<!-- DO NOT EDIT; this is a generated file -->\n<!-- modify "
 	config += SysconfigLoc(false)
 	config += " && run /usr/bin/fonts-config "
