@@ -1,13 +1,11 @@
 package lib
 
 import (
-	"bufio"
 	"fmt"
-	"github.com/marguerite/util/dirutils"
-	"github.com/marguerite/util/fileutils"
+	"io"
 	"io/ioutil"
+	"log"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -42,145 +40,134 @@ func generateBitmapLanguagesConfig(opts Options) string {
 	return tmp
 }
 
-func getPlaceholderType(line string) string {
-	placeholders := []string{
-		"_FORCE_HINTSTYLE_PLACEHOLDER_",
-		"_FORCE_AUTOHINT_PLACEHOLDER_",
-		"_FORCE_BW_PLACEHOLDER_",
-		"_FORCE_BW_MONOSPACE_PLACEHOLDER_",
-		"_USE_LCDFILTER_PLACEHOLDER_",
-		"_USE_RGBA_PLACEHOLDER_",
-		"_USE_EMBEDDED_BITMAPS_PLACEHOLDER_",
-		"_SYSCONFIG_FILE_PLACEHOLDER_",
-		"_METRIC_ALIASES_PLACEHOLDER_",
-		"_INCLUDE_USER_RENDERING_PLACEHOLDER_",
-	}
-
-	for _, v := range placeholders {
-		if strings.Contains(line, v) {
-			return v
-		}
-	}
-	return ""
-}
-
-func parseRenderingTemplatePlaceholderInLine(line string, opts Options, userMode bool) string {
-	switch placeholder := getPlaceholderType(line); placeholder {
-	case "_FORCE_HINTSTYLE_PLACEHOLDER_":
-		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- forcing hintstyle: %s\n", opts.ForceHintstyle))
-		return strings.Replace(line, placeholder, opts.ForceHintstyle, 1) + "\n"
-	case "_FORCE_AUTOHINT_PLACEHOLDER_":
-		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- forcing autohint: %t\n", opts.ForceAutohint))
-		return strings.Replace(line, placeholder, fmt.Sprintf("%t", opts.ForceAutohint), 1) + "\n"
-	case "_FORCE_BW_PLACEHOLDER_":
-		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- forcing black and white: %t\n", opts.ForceBw))
-		return strings.Replace(line, placeholder, fmt.Sprintf("%t", opts.ForceBw), 1) + "\n"
-	case "_FORCE_BW_MONOSPACE_PLACEHOLDER_":
-		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("-- forcing black and white for good hinted monospace: %t\n", opts.ForceBwMonospace))
-		return strings.Replace(line, placeholder, fmt.Sprintf("%t", opts.ForceBwMonospace), 1) + "\n"
-	case "_USE_LCDFILTER_PLACEHOLDER_":
-		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- lcdfilter: %s\n", opts.UseLcdfilter))
-		return strings.Replace(line, placeholder, opts.UseLcdfilter, 1) + "\n"
-	case "_USE_RGBA_PLACEHOLDER_":
-		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- subpixel arrangement: %s\n", opts.UseRgba))
-		return strings.Replace(line, placeholder, opts.UseRgba, 1) + "\n"
-	case "_USE_EMBEDDED_BITMAPS_PLACEHOLDER_":
-		return generateBitmapLanguagesConfig(opts)
-	case "_SYSCONFIG_FILE_PLACEHOLDER_":
-		line = strings.Replace(line, placeholder, "/etc/sysconfig/fonts-config", 1)
-		if userMode {
-			line = strings.Replace(line, "_FONTSCONFIG_RUN_PLACEHOLDER_", "/usr/bin/fonts-config -\\-user", 1)
-		} else {
-			line = strings.Replace(line, "_FONTSCONFIG_RUN_PLACEHOLDER_", "/usr/bin/fonts-config", 1)
-		}
-		return line + "\n"
-	case "_METRIC_ALIASES_PLACEHOLDER_":
-		return strings.Replace(line, placeholder, fmt.Sprintf("%t", opts.SearchMetricCompatible), 1) + "\n"
-	case "_INCLUDE_USER_RENDERING_PLACEHOLDER_":
-		if !userMode {
-			// let user have a possiblity to override system settings
-			return strings.Replace(line, placeholder, "<include ignore_missing=\"yes\" prefix=\"xdg\">fontconfig/rendering-options.conf</include>", 1) + "\n"
-		}
-	default:
-	}
-	return line + "\n"
-}
-
 // writeRenderingOptionsToFile check if our rendering options are same as the options in file and write
-func writeRenderingOptionsToFile(file, optionText string, verbosity int) error {
-	data, err := ioutil.ReadFile(file)
+func writeRenderingOptionsToFile(rw io.ReadWriter, file, opts string, verbosity int) {
+	data, err := ioutil.ReadAll(rw)
 	if err != nil {
-		return err
+		log.Fatalf("Can not read from %s\n", file)
 	}
 
-	if optionText == string(data) {
+	if opts == string(data) {
 		debug(verbosity, VerbosityDebug, fmt.Sprintf("--- %s unchanged ---\n", file))
 	} else {
 		debug(verbosity, VerbosityVerbose, fmt.Sprintf("Setting embedded bitmap usage in %s\n", file))
 		debug(verbosity, VerbosityDebug, fmt.Sprintf("--- writing %s ---\n", file))
-		err := ioutil.WriteFile(file, []byte(optionText), 0644)
+		n, err := rw.Write([]byte(opts))
 		if err != nil {
-			return err
+			log.Fatal(err)
+		}
+		if n != len(opts) {
+			log.Fatal("Failed to write all data, configuration may be broken or incomplete.")
 		}
 	}
-	return nil
 }
 
-// buildRenderingOptionsFromTemplate fill template with our rendering options
-func buildRenderingOptionsFromTemplate(tmplFile string, opts Options, userMode bool) (string, error) {
-	str := ""
-	tmpl, err := os.Open(tmplFile)
-	if err != nil {
-		return "", err
-	}
-	defer tmpl.Close()
-
-	scanner := bufio.NewScanner(tmpl)
-	scanner.Split(bufio.ScanLines)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		str += parseRenderingTemplatePlaceholderInLine(line, opts, userMode)
-	}
-	return str, nil
-}
-
-// GenerateDefaultRenderingOptions generates default fontconfig rendering options conf
-func GenerateDefaultRenderingOptions(userMode bool, opts Options) error {
+// GenerateRenderingOptions generates fontconfig rendering options conf
+func GenerateRenderingOptions(userMode bool, opts Options) {
 	/* # reflect fonts-config syconfig variables or
 	   # parameters in fontconfig setting to control rendering */
-	tmplFile := "/usr/share/fonts-config/10-rendering-options.conf.template"
-	renderFile := ""
-
-	if userMode {
-		renderFile = filepath.Join(GetEnv("HOME"), "/.config/fontconfig/rendering-options.conf")
-		err := dirutils.MkdirP(renderFile, opts.Verbosity)
-		if err != nil {
-			return err
-		}
-		err = fileutils.Touch(renderFile)
-		if err != nil {
-			return err
-		}
-	} else {
-		renderFile = "/etc/fonts/conf.d/10-rendering-options.conf"
+	renderFile := RenderingOptionsLoc(userMode)
+	dat, err := os.OpenFile(renderFile, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		log.Fatalf("Can not open %s: %s", renderFile, err.Error())
 	}
+	defer dat.Close()
 
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- generating %s ---\n", renderFile))
+	renderText := generateRenderingOptions(opts, userMode)
 
-	if _, err := os.Stat(tmplFile); os.IsNotExist(err) {
-		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("--- WARNING: %s doesn't exist!\n", tmplFile))
-		return nil
-	}
+	writeRenderingOptionsToFile(dat, renderFile, renderText, opts.Verbosity)
+}
 
-	renderText, err := buildRenderingOptionsFromTemplate(tmplFile, opts, userMode)
-	if err != nil {
-		return err
-	}
+func generateRenderingOptions(opts Options, userMode bool) string {
+	config := ConfigPreamble(userMode, "<!-- using target=\"pattern\", because we want to change pattern in 60-family-prefer.conf\n\tregarding to this setting -->\n")
+	config += generateStringOptionConfig(opts.Verbosity, opts.ForceHintstyle, "Forcing hintstyle:",
+		"<!-- Choose prefered common hinting style here.  -->\n<!-- Possible values: no, hitnone, hitslight, hintmedium and hintfull. -->\n<!-- Can be overriden with some other options, e. g. force_bw\n\tor force_bw_monospace => hintfull -->\n",
+		"force_hintstyle", false)
+	config += generateBoolOptionConfig(opts.Verbosity, opts.ForceAutohint, "Forcing autohint:",
+		"<!-- Force autohint always. -->\n<!-- If false, for well hinted fonts, their instructions are used for rendering. -->\n",
+		"force_autohint")
+	config += generateBoolOptionConfig(opts.Verbosity, opts.ForceBw, "Forcing black and white:",
+		"<!-- Do not use font smoothing (black&white rendering) at all.  -->\n",
+		"force_bw")
+	config += generateBoolOptionConfig(opts.Verbosity, opts.ForceBwMonospace, "Forcing black and white for good hinted monospace:",
+		"<!-- Do not use font smoothing for some monospaced fonts.  -->\n<!-- Liberation Mono, Courier New, Andale Mono, Monaco, etc. -->\n",
+		"force_bw_monospace")
+	config += generateStringOptionConfig(opts.Verbosity, opts.UseLcdfilter, "Lcdfilter:",
+		"<!-- Set LCD filter. Amend when you want use subpixel rendering. -->\n<!-- Don't forgot to set correct subpixel ordering in 'rgba' element. -->\n<!-- Possible values: lcddefault, lcdlight, lcdlegacy, lcdnone -->\n",
+		"lcdfilter", true)
+	config += generateStringOptionConfig(opts.Verbosity, opts.UseRgba, "Subpixel arrangement:",
+		"<!-- Set LCD subpixel arrangement and orientation.  -->\n<!-- Possible values: unknown, none, rgb, bgr, vrgb, vbgr. -->\n",
+		"rgba", true)
+	config += generateBitmapLanguagesConfig(opts)
+	config += generateBoolOptionConfig(opts.Verbosity, opts.SearchMetricCompatible, "Search metric compatible fonts:",
+		"<!-- Search for metric compatible families? -->\n",
+		"search_metric_aliases")
+	config += generateUserInclude(userMode)
+	config += "</fontconfig>\n"
+	return config
+}
 
-	err = writeRenderingOptionsToFile(renderFile, renderText, opts.Verbosity)
-	if err != nil {
-		return err
+// validStringOption return false if a string is "null", has suffix "none" or just empty.
+func validStringOption(opt string) bool {
+	if len(opt) == 0 || opt == "null" || strings.HasSuffix(opt, "none") {
+		return false
 	}
-	return nil
+	return true
+}
+
+// ConfigPreamble generate fontconfig preamble
+func ConfigPreamble(userMode bool, comment string) string {
+	config := "<?xml version=\"1.0\"?>\n<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n\n<!-- DO NOT EDIT; this is a generated file -->\n<!-- modify "
+	config += SysconfigLoc(false)
+	config += " && run /usr/bin/fonts-config "
+	if userMode {
+		config += "-\\-user "
+	}
+	config += "instead. -->\n"
+	config += comment
+	config += "\n<fontconfig>\n"
+	return config
+}
+
+func generateStringOptionConfig(verbosity int, opt, dbgOutput, comment, editName string, cst bool) string {
+	if !validStringOption(opt) {
+		return ""
+	}
+	debug(verbosity, VerbosityDebug, fmt.Sprintf(dbgOutput+" %s\n", opt))
+	config := comment
+	config += "\t<match target=\"pattern\" >\n\t\t<edit name=\""
+	config += editName
+	config += "\" mode=\"assign\">\n\t\t\t"
+	if cst {
+		config += "<const>"
+	} else {
+		config += "<string>"
+	}
+	config += opt
+	if cst {
+		config += "</const>"
+	} else {
+		config += "</string>"
+	}
+	config += "\n\t\t</edit>\n\t</match>\n"
+	return config
+}
+
+func generateBoolOptionConfig(verbosity int, opt bool, dbgOutput, comment, editName string) string {
+	debug(verbosity, VerbosityDebug, fmt.Sprintf(dbgOutput+" %t\n", opt))
+	config := comment
+	config += "\t<match target=\"pattern\">\n\t\t<edit name=\""
+	config += editName
+	config += "\" mode=\"assign\">\n\t\t\t<bool>"
+	config += fmt.Sprintf("%t", opt)
+	config += "</bool>\n\t\t</edit>\n\t</match>\n"
+	return config
+}
+
+func generateUserInclude(userMode bool) string {
+	if userMode {
+		return "\t<include ignore_missing=\"yes\" prefix=\"xdg\">fontconfig/rendering-options.conf</include>\n"
+	}
+	return ""
 }

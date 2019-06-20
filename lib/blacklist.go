@@ -13,6 +13,7 @@ import (
 	"sync"
 )
 
+// ReadFontFilesFromDir read font files from specific dir
 func ReadFontFilesFromDir(d string, emoji bool) []string {
 	files, _ := dirutils.Ls(d, "file")
 	fonts := []string{}

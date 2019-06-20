@@ -128,12 +128,12 @@ func (opt Options) Write(f io.ReadWriter, userMode bool) {
 	}
 
 	if n != len(text) {
-		log.Fatal("failed to write data.")
+		log.Fatal("Failed to write all data, configuration may be broken or incomplete.")
 	}
 }
 
 func formatBool(s string) bool {
-	if s == "yes" {
+	if strings.HasPrefix(strings.ToLower(s), "y") {
 		return true
 	}
 	return false
