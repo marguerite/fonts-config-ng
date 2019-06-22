@@ -38,5 +38,5 @@ func GenMetricCompatibility(verbosity int) {
 
 	debug(verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.\n", file))
 
-	WriteFile(file, text)
+	WriteFile(text, file)
 }

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // VerbosityDebug an interger to control verbose output
@@ -58,7 +59,12 @@ func ConfigLocation(c string, userMode bool) string {
 	if userMode {
 		return filepath.Join(GetEnv("HOME"), ".config/fontconfig"+m[c].User)
 	}
-	return filepath.Join("/etc/sysconfig", m[c].System)
+
+	prefix := "/etc/sysconfig"
+	if strings.HasSuffix(m[c].System, ".conf") {
+		prefix = "/etc/fonts/conf.d"
+	}
+	return filepath.Join(prefix, m[c].System)
 }
 
 // NewReader create an io.Reader from file

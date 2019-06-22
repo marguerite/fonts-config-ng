@@ -109,12 +109,12 @@ func getUserPrefix(userMode bool, verbosity int) string {
 }
 
 func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
-	sys := lib.NewReader(lib.ConfigLocation("sys", false))
+	sys := lib.NewReader(lib.ConfigLocation("fc", false))
 	config := lib.LoadOptions(sys, lib.NewOptions())
 	log.Printf("System Configuration: %s\n", config.Bounce())
 
 	if userMode {
-		user := lib.NewReader(lib.ConfigLocation("sys", true))
+		user := lib.NewReader(lib.ConfigLocation("fc", true))
 		config = lib.LoadOptions(user, config)
 		log.Printf("With user configuration prepended: %s\n", config.Bounce())
 	}
@@ -128,12 +128,12 @@ func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
 }
 
 func writeOptions(opt lib.Options, userMode bool) {
-	tmpl := lib.NewReader(lib.ConfigLocation("sys", userMode))
+	tmpl := lib.NewReader(lib.ConfigLocation("fc", userMode))
 	config := opt.FillTemplate(tmpl)
 
-	f, err := os.OpenFile(lib.ConfigLocation("sys", userMode), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	f, err := os.OpenFile(lib.ConfigLocation("fc", userMode), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 	if err != nil {
-		log.Fatalf("Can not open %s to write: %s.\n", lib.ConfigLocation("sys", userMode), err.Error())
+		log.Fatalf("Can not open %s to write: %s.\n", lib.ConfigLocation("fc", userMode), err.Error())
 	}
 	defer f.Close()
 
@@ -315,7 +315,7 @@ func main() {
 
 			text := "Sysconfig options (read from /etc/sysconfig/fonts-config"
 			if userMode {
-				text += fmt.Sprintf(", %s)\n", lib.ConfigLocation("sys", userMode))
+				text += fmt.Sprintf(", %s)\n", lib.ConfigLocation("fc", userMode))
 			} else {
 				text += ")\n"
 			}

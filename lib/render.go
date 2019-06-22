@@ -161,7 +161,7 @@ func genStringOptionConfig(verbosity int, opt, dbgOutput, comment, editName stri
 }
 
 func genBoolOptionConfig(verbosity int, opt bool, dbgOutput, comment, editName string, force bool) string {
-	if strings.HasPrefix(editName, "Force") && !opt {
+	if strings.HasPrefix(editName, "force") && !opt {
 		return ""
 	}
 	debug(verbosity, VerbosityDebug, fmt.Sprintf(dbgOutput+" %t\n", opt))
