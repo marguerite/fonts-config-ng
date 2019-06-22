@@ -50,8 +50,8 @@ func (opt Options) FindByName(name string) interface{} {
 	return nil
 }
 
-// String convert Options to string
-func (opt Options) String() string {
+// Bounce bounce Options as string
+func (opt Options) Bounce() string {
 	vo := reflect.ValueOf(opt)
 	str := ""
 	for i := 0; i < vo.NumField(); i++ {
@@ -90,8 +90,8 @@ func (opt *Options) Merge(dst Options, idx []int) {
 	}
 }
 
-// String convert options to string with the help of template
-func (opt Options) String(f io.Reader) string {
+// FillTemplate convert options to string with the help of template
+func (opt Options) FillTemplate(f io.Reader) string {
 	text := ""
 	re := regexp.MustCompile(`^([^#]+\w)="(.*)"$`)
 

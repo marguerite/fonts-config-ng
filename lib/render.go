@@ -66,7 +66,7 @@ func writeRenderingOptions(f io.ReadWriter, out, opts string, verbosity int) {
 func GenRenderingOptions(userMode bool, opts Options) {
 	/* # reflect fonts-config syconfig variables or
 	   # parameters in fontconfig setting to control rendering */
-	renderFile := RenderingOptionsLoc(userMode)
+	renderFile := ConfigLocation("rd", userMode)
 	dat, err := os.OpenFile(renderFile, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("Can not open %s: %s", renderFile, err.Error())
@@ -119,7 +119,7 @@ func validStringOption(opt string) bool {
 // genConfigPreamble generate fontconfig preamble
 func genConfigPreamble(userMode bool, comment string) string {
 	config := "<?xml version=\"1.0\"?>\n<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n\n<!-- DO NOT EDIT; this is a generated file -->\n<!-- modify "
-	config += SysconfigLoc(false)
+	config += ConfigLocation("fc", false)
 	config += " && run /usr/bin/fonts-config "
 	if userMode {
 		config += "-\\-user "
@@ -161,6 +161,9 @@ func genStringOptionConfig(verbosity int, opt, dbgOutput, comment, editName stri
 }
 
 func genBoolOptionConfig(verbosity int, opt bool, dbgOutput, comment, editName string, force bool) string {
+	if strings.HasPrefix(editName, "Force") && !opt {
+		return ""
+	}
 	debug(verbosity, VerbosityDebug, fmt.Sprintf(dbgOutput+" %t\n", opt))
 	config := comment
 	config += "\t<match target=\"pattern\">\n\t\t<edit name=\""

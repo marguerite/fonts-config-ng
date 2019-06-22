@@ -109,43 +109,31 @@ func getUserPrefix(userMode bool, verbosity int) string {
 }
 
 func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
-	sys, err := os.Open(lib.SysconfigLoc(false))
-	if err != nil {
-		log.Fatalf("Can not load %s: %s\n", lib.SysconfigLoc(false), err.Error())
-	}
-	defer sys.Close()
+	sys := lib.NewReader(lib.ConfigLocation("sys", false))
 	config := lib.LoadOptions(sys, lib.NewOptions())
-	log.Printf("System Configuration: %s\n", config.String())
+	log.Printf("System Configuration: %s\n", config.Bounce())
 
 	if userMode {
-		user, err := os.Open(lib.SysconfigLoc(true))
-		if err != nil {
-			log.Fatalf("Can not load %s: %s\n", lib.SysconfigLoc(true), err.Error())
-		}
+		user := lib.NewReader(lib.ConfigLocation("sys", true))
 		config = lib.LoadOptions(user, config)
-		user.Close()
-		log.Printf("With user configuration prepended: %s\n", config.String())
+		log.Printf("With user configuration prepended: %s\n", config.Bounce())
 	}
 
 	config.Merge(opt, cliFlagsRltPos(c))
-	log.Printf("With command line configuration prepended: %s\n", config.String())
+	log.Printf("With command line configuration prepended: %s\n", config.Bounce())
 
-	writeOptions(sysConfig, userMode)
+	writeOptions(config, userMode)
 
-	return sysConfig
+	return config
 }
 
 func writeOptions(opt lib.Options, userMode bool) {
-	f, err := os.Open(lib.SysconfigLoc(userMode))
-	if err != nil {
-		log.Fatalf("Can't read from %s: %s.\n", lib.SysconfigLoc(userMode), err.Error())
-	}
-	config := opt.String(f)
-	f.Close()
+	tmpl := lib.NewReader(lib.ConfigLocation("sys", userMode))
+	config := opt.FillTemplate(tmpl)
 
-	f, err = os.OpenFile(lib.SysconfigLoc(userMode), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	f, err := os.OpenFile(lib.ConfigLocation("sys", userMode), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 	if err != nil {
-		log.Fatalf("Can not open %s to write: %s.\n", lib.SysconfigLoc(userMode), err.Error())
+		log.Fatalf("Can not open %s to write: %s.\n", lib.ConfigLocation("sys", userMode), err.Error())
 	}
 	defer f.Close()
 
@@ -314,7 +302,7 @@ func main() {
 			emojis, preferredSans, preferredSerif,
 			preferredMono, metric, forceFPL, ttcap, enableJava}
 
-		log.Printf("Command line options: %s\n", options.String())
+		log.Printf("Command line options: %s\n", options.Bounce())
 
 		config := loadOptions(options, c, userMode)
 
@@ -327,17 +315,18 @@ func main() {
 
 			text := "Sysconfig options (read from /etc/sysconfig/fonts-config"
 			if userMode {
-				text += fmt.Sprintf(", %s)\n", lib.SysconfigLoc(userMode))
+				text += fmt.Sprintf(", %s)\n", lib.ConfigLocation("sys", userMode))
 			} else {
 				text += ")\n"
 			}
 			log.Println(text)
-			log.Println(config.String())
+			log.Println(config.Bounce())
 		}
 
 		if !userMode {
 			err := lib.MkFontScaleDir(config, force)
 			lib.ErrChk(err)
+			lib.GenMetricCompatibility(verbosity)
 		}
 
 		/*	# The following two calls may change files in /etc/fonts, therefore
@@ -346,11 +335,9 @@ func main() {
 			# will think that the cache files are out of date again. */
 
 		lib.GenRenderingOptions(userMode, config)
+		lib.GenFamilyPreferenceLists(userMode, config)
 
-		err := lib.GenerateFamilyPreferenceLists(userMode, config)
-		lib.ErrChk(err)
-
-		err = lib.GenerateEmojiBlacklist(userMode, config)
+		err := lib.GenerateEmojiBlacklist(userMode, config)
 		lib.ErrChk(err)
 
 		if !userMode {
