@@ -114,21 +114,21 @@ func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
 		log.Fatalf("Can not load %s: %s\n", lib.SysconfigLoc(false), err.Error())
 	}
 	defer sys.Close()
-	sysConfig := lib.LoadOptions(sys, lib.NewOptions())
-	log.Printf("System Configuration: %s\n", sysConfig.Bounce())
+	config := lib.LoadOptions(sys, lib.NewOptions())
+	log.Printf("System Configuration: %s\n", config.String())
 
 	if userMode {
 		user, err := os.Open(lib.SysconfigLoc(true))
 		if err != nil {
 			log.Fatalf("Can not load %s: %s\n", lib.SysconfigLoc(true), err.Error())
 		}
-		sysConfig = lib.LoadOptions(user, sysConfig)
+		config = lib.LoadOptions(user, config)
 		user.Close()
-		log.Printf("With user configuration prepended: %s\n", sysConfig.Bounce())
+		log.Printf("With user configuration prepended: %s\n", config.String())
 	}
 
-	sysConfig.Merge(opt, cliFlagsRltPos(c))
-	log.Printf("With command line configuration prepended: %s\n", sysConfig.Bounce())
+	config.Merge(opt, cliFlagsRltPos(c))
+	log.Printf("With command line configuration prepended: %s\n", config.String())
 
 	writeOptions(sysConfig, userMode)
 
@@ -314,7 +314,7 @@ func main() {
 			emojis, preferredSans, preferredSerif,
 			preferredMono, metric, forceFPL, ttcap, enableJava}
 
-		log.Printf("Command line options: %s\n", options.Bounce())
+		log.Printf("Command line options: %s\n", options.String())
 
 		config := loadOptions(options, c, userMode)
 
@@ -332,7 +332,7 @@ func main() {
 				text += ")\n"
 			}
 			log.Println(text)
-			log.Println(config.Bounce())
+			log.Println(config.String())
 		}
 
 		if !userMode {

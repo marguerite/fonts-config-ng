@@ -50,8 +50,8 @@ func (opt Options) FindByName(name string) interface{} {
 	return nil
 }
 
-// Bounce Options to string
-func (opt Options) Bounce() string {
+// String convert Options to string
+func (opt Options) String() string {
 	vo := reflect.ValueOf(opt)
 	str := ""
 	for i := 0; i < vo.NumField(); i++ {
