@@ -43,6 +43,7 @@ func ErrChk(e error) {
 	}
 }
 
+// Location system locations
 type Location struct {
 	System string
 	User   string
@@ -81,22 +82,4 @@ func NewReader(f string) *bytes.Buffer {
 	}
 
 	return bytes.NewBuffer(buf)
-}
-
-// WriteFile write text to file
-func WriteFile(text, file string) {
-	dat, err := os.OpenFile(file, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0644)
-	if err != nil {
-		log.Fatalf("Can not open %s: \"%s\".\n", file, err.Error())
-	}
-	defer dat.Close()
-
-	n, err := dat.Write([]byte(text))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if n != len(text) {
-		log.Fatal("Failed to write all data, configuration may be broken or incomplete.")
-	}
 }

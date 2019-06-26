@@ -88,5 +88,8 @@ func GenFamilyPreferenceLists(userMode bool, opts Options) {
 
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.\n", fplFile))
 
-	WriteFile(fplText, fplFile)
+	err := ioutil.WriteFile(fplText, fplFile, 0644)
+	if err != nil {
+		log.Fatalf("Can not write %s: %s\n", fplFile, err.Error())
+	}
 }

@@ -40,43 +40,19 @@ func genBitmapLanguagesConfig(opts Options) string {
 	return tmp
 }
 
-// writeRenderingOptions check if our rendering options are same as the options in file and write
-func writeRenderingOptions(f io.ReadWriter, out, opts string, verbosity int) {
-	data, err := ioutil.ReadAll(f)
-	if err != nil {
-		log.Fatalf("Can not read from %s\n", out)
-	}
-
-	if opts == string(data) {
-		debug(verbosity, VerbosityDebug, fmt.Sprintf("%s unchanged.\n", out))
-	} else {
-		debug(verbosity, VerbosityVerbose, fmt.Sprintf("Setting embedded bitmap usage in %s\n", out))
-		debug(verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.\n", out))
-		n, err := f.Write([]byte(opts))
-		if err != nil {
-			log.Fatal(err)
-		}
-		if n != len(opts) {
-			log.Fatal("Failed to write all data, configuration may be broken or incomplete.")
-		}
-	}
-}
-
 // GenRenderingOptions generates fontconfig rendering options conf
 func GenRenderingOptions(userMode bool, opts Options) {
 	/* # reflect fonts-config syconfig variables or
 	   # parameters in fontconfig setting to control rendering */
 	renderFile := ConfigLocation("rd", userMode)
-	dat, err := os.OpenFile(renderFile, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0644)
-	if err != nil {
-		log.Fatalf("Can not open %s: %s", renderFile, err.Error())
-	}
-	defer dat.Close()
 
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Generating %s.\n", renderFile))
 	renderText := genRenderingOptions(opts, userMode)
 
-	writeRenderingOptions(dat, renderFile, renderText, opts.Verbosity)
+	err := ioutil.WriteFile(renderFile, []byte(renderText), 0644)
+	if err != nil {
+		log.Fatalf("Can not write %s: %s\n", renderFile, err.Error())
+	}
 }
 
 func genRenderingOptions(opts Options, userMode bool) string {

@@ -26,7 +26,7 @@ func mkMetricCompatibility(avail io.Reader) string {
 	return metric
 }
 
-// GenMetricCompatiblity generate 30-metric-aliases.conf
+// GenMetricCompatibility generate 30-metric-aliases.conf
 func GenMetricCompatibility(verbosity int) {
 	// replace fontconfig's /etc/fonts/conf.d/30-metric-aliases.conf
 	// by fonts-config's one
@@ -38,5 +38,8 @@ func GenMetricCompatibility(verbosity int) {
 
 	debug(verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.\n", file))
 
-	WriteFile(text, file)
+	err := ioutil.WriteFile(text, file, 0644)
+	if err != nil {
+		log.Fatalf("Can not write %s: %s\n", file, err.Error())
+	}
 }
