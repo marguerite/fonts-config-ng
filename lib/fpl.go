@@ -2,6 +2,8 @@ package lib
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"regexp"
 	"strings"
 )
@@ -88,7 +90,7 @@ func GenFamilyPreferenceLists(userMode bool, opts Options) {
 
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.\n", fplFile))
 
-	err := ioutil.WriteFile(fplText, fplFile, 0644)
+	err := ioutil.WriteFile(fplText, []byte(fplFile), 0644)
 	if err != nil {
 		log.Fatalf("Can not write %s: %s\n", fplFile, err.Error())
 	}
