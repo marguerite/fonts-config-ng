@@ -18,7 +18,7 @@ func FcCache(verbosity int) {
 
 		_, status, _ := command.Run(cmd, cmdOpts, verbosity)
 
-		debug(verbosity, VerbosityDebug, fmt.Sprintf("exit status of fc-cache: %d\n", status))
+		debug(verbosity, VerbosityDebug, fmt.Sprintf("Exit status of fc-cache: %d\n", status))
 	}
 }
 
@@ -29,13 +29,13 @@ func FpRehash(verbosity int) {
 		if re.MatchString(GetEnv("DISPLAY")) {
 			cmdOpts := []string{"fp", "rehash"}
 			debug(verbosity, VerbosityVerbose, "Rereading the font databases in the current font path ...\n")
-			debug(verbosity, VerbosityDebug, "--- running xset fp rehash\n")
+			debug(verbosity, VerbosityDebug, "Running xset fp rehash\n")
 
 			out, _, _ := command.Run(cmd, cmdOpts, verbosity)
 			debug(verbosity, VerbosityDebug, string(out)+"\n")
 		} else {
 			debug(verbosity, VerbosityVerbose, "It is not a local display, do not reread X font databases for now.\n")
-			debug(verbosity, VerbosityDebug, "--- NOTE: do not run 'xset fp rehash', no local display detected.\n")
+			debug(verbosity, VerbosityDebug, "NOTE: do not run 'xset fp rehash', no local display detected.\n")
 		}
 	}
 }
@@ -53,6 +53,6 @@ func ReloadXfsConfig(verbosity int) {
 			debug(verbosity, VerbosityDebug, "X Font Server not used.\n")
 		}
 	} else {
-		debug(verbosity, VerbosityVerbose, "--- WARNING: ps command is missing, couldn't search for X Font Server pids.")
+		debug(verbosity, VerbosityVerbose, "WARNING: ps command is missing, couldn't search for X Font Server pids.")
 	}
 }

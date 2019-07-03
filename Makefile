@@ -7,16 +7,16 @@ CONF = $(patsubst conf.d/%, %, $(wildcard conf.d/*.conf))
 all: fonts-config generate_noto_info generate_noto_config generate_cjk_config
 
 fonts-config: cmd/fonts-config.go
-	env GO15VENDOREXPERIMENT=1 go build cmd/fonts-config.go
+	env GO111MODULES=on go build cmd/fonts-config.go
 
 generate_noto_info: tool/generate_noto_info.go
-	env GO15VENDOREXPERIMENT=1 go build tool/generate_noto_info.go
+	env GO111MODULES=on go build tool/generate_noto_info.go
 
 generate_noto_config: tool/generate_noto_config.go
-	env GO15VENDOREXPERIMENT=1 go build tool/generate_noto_config.go
+	env GO111MODULES=on go build tool/generate_noto_config.go
 
-generate_cjk_config:  tool/generate_cjk_config.go
-	env GO15VENDOREXPERIMENT=1 go build tool/generate_cjk_config.go
+generate_cjk_config:  tool/generate_noto_cjk_config.go
+	env GO111MODULES=on go build tool/generate_noto_cjk_config.go
 
 .PHONY: install
 install: all
@@ -28,9 +28,8 @@ install: all
 	install -m 0755 fonts-config $(DESTDIR)$(PREFIX)/sbin
 	install -m 0755 generate_noto_info $(DESTDIR)$(LIBEXECDIR)/fonts-config
 	install -m 0755 generate_noto_config $(DESTDIR)$(LIBEXECDIR)/fonts-config
-	install -m 0755 generate_cjk_config $(DESTDIR)$(LIBEXECDIR)/fonts-config
+	install -m 0755 generate_noto_cjk_config $(DESTDIR)$(LIBEXECDIR)/fonts-config
 	install -m 0644 data/fontconfig.SUSE.properties.template $(DESTDIR)$(PREFIX)/share/fonts-config
-	install -m 0644 data/10-rendering-options.conf.template $(DESTDIR)$(PREFIX)/share/fonts-config
 	install -m 0644 data/sysconfig.fonts-config $(DESTDIR)$(PREFIX)/share/fillup-templates
 	# following three conf files can not be under /usr/share/fonts-config
 	# as they are changed during installation [bnc#882029 (internal)

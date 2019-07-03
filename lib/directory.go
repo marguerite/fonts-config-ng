@@ -424,9 +424,9 @@ func checkScaleAndDirUpdate(dst, timestamp, fontScale, fontDir string, verbosity
 	return false
 }
 
-func cleanScaleAndDir(fontScale, fontDir string, verbosity int) {
+func cleanScaleAndDir(fontScale, fontDir string) {
 	for _, d := range []string{fontScale, fontDir} {
-		fileutils.Remove(d, verbosity)
+		fileutils.Remove(d)
 	}
 }
 
@@ -457,10 +457,10 @@ func createOrCopyFontDirFile(fontDir, fontScale string, verbosity int) bool {
 }
 
 // removeFontCache remove fonts.cache-* in dst
-func removeFontCache(dst string, verbosity int) {
+func removeFontCache(dst string) {
 	caches, _ := filepath.Glob(filepath.Join(dst, "/fonts.cache-*"))
 	for _, cache := range caches {
-		fileutils.Remove(cache, verbosity)
+		fileutils.Remove(cache)
 	}
 }
 
@@ -485,7 +485,7 @@ func makeFontScaleAndDir(d string, opts Options, force bool) error {
 
 		debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("%s: creating fonts.{scale,dir}\n", d))
 
-		cleanScaleAndDir(fontScale, fontDir, opts.Verbosity)
+		cleanScaleAndDir(fontScale, fontDir)
 		createSymlink(d)
 
 		if _, err := os.Stat("/usr/bin/mkfontscale"); !os.IsNotExist(err) {
@@ -520,13 +520,13 @@ func makeFontScaleAndDir(d string, opts Options, force bool) error {
 			/* mkfontscale and/or mkfontdir failed or didn't exist. Remove the
 			   timestamp to make sure this script tries again next time
 			   when the problem with mkfontscale and/or mkfontdir is fixed: */
-			fileutils.Remove(timestamp, opts.Verbosity)
+			fileutils.Remove(timestamp)
 		} else {
 			/* fonts.cache-* files are now generated in /var/cache/fontconfig,
 			   remove old cache files in the individual directories
 			   (fc-cache does this as well when the cache files are out of date
 			   but it can't hurt to remove them here as well just to make sure). */
-			removeFontCache(d, opts.Verbosity)
+			removeFontCache(d)
 			applyTimestamp(timestamp, d, fontScale, fontDir)
 		}
 

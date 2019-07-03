@@ -6,7 +6,6 @@ import (
 	"github.com/marguerite/util/command"
 	"github.com/marguerite/util/fileutils"
 	"github.com/marguerite/util/slice"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -261,7 +260,7 @@ func GenerateJavaFontSetup(verbosity int) error {
 	}
 
 	for _, f := range javaFiles {
-		err := ioutil.WriteFile(f, []byte(javaText), 0644)
+		err := persist(f, []byte(javaText), 0644)
 		if err != nil {
 			return err
 		}

@@ -2,7 +2,6 @@ package lib
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"regexp"
 	"strings"
@@ -67,7 +66,7 @@ func buildFPL(genericName, preferredFamiliesInString string, userMode bool, opts
 
 // GenFamilyPreferenceLists generates fontconfig fpl conf with user's explicit choices
 func GenFamilyPreferenceLists(userMode bool, opts Options) {
-	fplFile := ConfigLocation("fpl", userMode)
+	fplFile := GenConfigLocation("fpl", userMode)
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Generating %s\n", fplFile))
 
 	fplText := genConfigPreamble(userMode, "")
@@ -90,7 +89,7 @@ func GenFamilyPreferenceLists(userMode bool, opts Options) {
 
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.\n", fplFile))
 
-	err := ioutil.WriteFile(fplText, []byte(fplFile), 0644)
+	err := persist(fplFile, []byte(fplText), 0644)
 	if err != nil {
 		log.Fatalf("Can not write %s: %s\n", fplFile, err.Error())
 	}

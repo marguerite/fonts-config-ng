@@ -2,6 +2,7 @@ package lib
 
 import (
 	"bytes"
+	"github.com/marguerite/util/fileutils"
 	"io/ioutil"
 	"log"
 	"os"
@@ -49,16 +50,18 @@ type Location struct {
 	User   string
 }
 
-// ConfigLocation return config file locations
-func ConfigLocation(c string, userMode bool) string {
+// GenConfigLocation return config file locations
+func GenConfigLocation(c string, userMode bool) string {
 	m := map[string]Location{
-		"fc":  {"fonts-config", "fonts-config"},
-		"rd":  {"10-rendering-options.conf", "rendering-options.conf"},
-		"fpl": {"58-family-prefer-local.conf", "family-prefer.conf"},
+		"fc":        {"fonts-config", "fonts-config"},
+		"render":    {"10-rendering-options.conf", "rendering-options.conf"},
+		"fpl":       {"58-family-prefer-local.conf", "family-prefer.conf"},
+		"dual":      {"20-fix-globaladvance.conf", "fix-globaladvance.conf"},
+		"blacklist": {"81-emoji-blacklist-glyphs.conf", "emoji-blacklist-glyphs.conf"},
 	}
 
 	if userMode {
-		return filepath.Join(GetEnv("HOME"), ".config/fontconfig"+m[c].User)
+		return filepath.Join(GetEnv("HOME"), ".config/fontconfig/"+m[c].User)
 	}
 
 	prefix := "/etc/sysconfig"
@@ -82,4 +85,14 @@ func NewReader(f string) *bytes.Buffer {
 	}
 
 	return bytes.NewBuffer(buf)
+}
+
+// persist Overwrite file with new content or completely remove the file.
+func persist(file string, text []byte, perm os.FileMode) error {
+	if len(text) == 0 {
+		err := fileutils.Remove(file)
+		return err
+	}
+	err := ioutil.WriteFile(file, text, perm)
+	return err
 }

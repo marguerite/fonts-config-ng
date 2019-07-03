@@ -20,7 +20,7 @@ import (
 // Version fonts-config's version
 const Version string = "20190608"
 
-func removeUserSetting(prefix string, verbosity int) error {
+func removeUserSetting(prefix string) error {
 	if len(prefix) == 0 {
 		return nil
 	}
@@ -29,7 +29,7 @@ func removeUserSetting(prefix string, verbosity int) error {
 		filepath.Join(prefix, "rendering-options.conf"),
 		filepath.Join(prefix, "family-prefer.conf"),
 	} {
-		err := fileutils.Remove(f, verbosity)
+		err := fileutils.Remove(f)
 		if err != nil {
 			return err
 		}
@@ -109,12 +109,12 @@ func getUserPrefix(userMode bool, verbosity int) string {
 }
 
 func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
-	sys := lib.NewReader(lib.ConfigLocation("fc", false))
+	sys := lib.NewReader(lib.GenConfigLocation("fc", false))
 	config := lib.LoadOptions(sys, lib.NewOptions())
 	log.Printf("System Configuration: %s\n", config.Bounce())
 
 	if userMode {
-		user := lib.NewReader(lib.ConfigLocation("fc", true))
+		user := lib.NewReader(lib.GenConfigLocation("fc", true))
 		config = lib.LoadOptions(user, config)
 		log.Printf("With user configuration prepended: %s\n", config.Bounce())
 	}
@@ -128,12 +128,12 @@ func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
 }
 
 func writeOptions(opt lib.Options, userMode bool) {
-	tmpl := lib.NewReader(lib.ConfigLocation("fc", userMode))
+	tmpl := lib.NewReader(lib.GenConfigLocation("fc", userMode))
 	config := opt.FillTemplate(tmpl)
 
-	f, err := os.OpenFile(lib.ConfigLocation("fc", userMode), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	f, err := os.OpenFile(lib.GenConfigLocation("fc", userMode), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 	if err != nil {
-		log.Fatalf("Can not open %s to write: %s.\n", lib.ConfigLocation("fc", userMode), err.Error())
+		log.Fatalf("Can not open %s to write: %s.\n", lib.GenConfigLocation("fc", userMode), err.Error())
 	}
 	defer f.Close()
 
@@ -290,7 +290,7 @@ func main() {
 		userPrefix := getUserPrefix(userMode, verbosity)
 
 		if remove {
-			err := removeUserSetting(userPrefix, verbosity)
+			err := removeUserSetting(userPrefix)
 			if err != nil {
 				log.Fatalf("Can not remove configuration file: %s", err.Error())
 			}
@@ -315,7 +315,7 @@ func main() {
 
 			text := "Sysconfig options (read from /etc/sysconfig/fonts-config"
 			if userMode {
-				text += fmt.Sprintf(", %s)\n", lib.ConfigLocation("fc", userMode))
+				text += fmt.Sprintf(", %s)\n", lib.GenConfigLocation("fc", userMode))
 			} else {
 				text += ")\n"
 			}
@@ -336,9 +336,8 @@ func main() {
 
 		lib.GenRenderingOptions(userMode, config)
 		lib.GenFamilyPreferenceLists(userMode, config)
-
-		err := lib.GenerateEmojiBlacklist(userMode, config)
-		lib.ErrChk(err)
+		lib.GenerateEmojiBlacklist(userMode, config)
+		lib.FixDualSpacing(userMode)
 
 		if !userMode {
 			lib.FcCache(config.Verbosity)

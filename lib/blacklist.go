@@ -5,7 +5,7 @@ import (
 	"github.com/marguerite/util/dirutils"
 	"github.com/marguerite/util/fileutils"
 	"github.com/marguerite/util/slice"
-	"io/ioutil"
+	"log"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -82,20 +82,16 @@ func getEmojiFontFilesByName(emojis string) []string {
 }
 
 // GenerateEmojiBlacklist generate 81-emoji-blacklist-glyphs.conf
-func GenerateEmojiBlacklist(userMode bool, opts Options) error {
+func GenerateEmojiBlacklist(userMode bool, opts Options) {
 	nonEmojiFonts := ReadFontFilesFromDir("/usr/share/fonts/truetype", false)
 	emojiFonts := getEmojiFontFilesByName(opts.SystemEmojis)
 	emojiCharset := BuildEmojiCharset(emojiFonts)
-
-	emojiConf := genConfigPreamble(userMode, "")
-
 	blacklist := EnhancedFonts{}
 
-	debug(opts.Verbosity, VerbosityDebug, "--- Blacklisting glyphs from system emoji fonts in non-emoji fonts.\n")
+	debug(opts.Verbosity, VerbosityDebug, "Blacklisting glyphs from system emoji fonts in non-emoji fonts.\n")
 
 	if len(emojiCharset) == 0 {
-		debug(opts.Verbosity, VerbosityDebug, "---")
-		return nil
+		return
 	}
 
 	wg := sync.WaitGroup{}
@@ -146,22 +142,24 @@ func GenerateEmojiBlacklist(userMode bool, opts Options) error {
 
 	wg.Wait()
 
-	debug(opts.Verbosity, VerbosityDebug, "---")
+	conf := ""
+	emojiConf := ""
 
 	for _, f := range blacklist {
-		emojiConf += generateBlacklistConfig(f)
+		conf += generateBlacklistConfig(f)
 	}
 
-	emojiConf += "</fontconfig>\n"
-
-	blacklistFile := filepath.Join("/etc/fonts/conf.d/81-emoji-blacklist-glyphs.conf")
-	if userMode {
-		blacklistFile = filepath.Join(GetEnv("HOME"), ".config/fontconfig/emoji-blacklist-glyphs.conf")
+	if len(conf) > 0 {
+		emojiConf = genConfigPreamble(userMode, "") + conf + "</fontconfig>\n"
 	}
 
-	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("blacklist file location: %s\n", blacklistFile))
+	blacklistFile := GenConfigLocation("blacklist", userMode)
 
-	err := ioutil.WriteFile(blacklistFile, []byte(emojiConf), 0644)
+	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Blacklist file location: %s\n", blacklistFile))
 
-	return err
+	err := persist(blacklistFile, []byte(emojiConf), 0644)
+
+	if err != nil {
+		log.Fatalf("Can not write %s: %s\n", blacklistFile, err.Error())
+	}
 }

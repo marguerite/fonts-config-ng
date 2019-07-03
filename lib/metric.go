@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"strings"
 )
@@ -40,7 +39,7 @@ func GenMetricCompatibility(verbosity int) {
 
 	debug(verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.\n", file))
 
-	err := ioutil.WriteFile(text, []byte(file), 0644)
+	err := persist(file, []byte(text), 0644)
 	if err != nil {
 		log.Fatalf("Can not write %s: %s\n", file, err.Error())
 	}

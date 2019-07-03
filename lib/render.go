@@ -2,7 +2,6 @@ package lib
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"strings"
 )
@@ -42,21 +41,21 @@ func genBitmapLanguagesConfig(opts Options) string {
 func GenRenderingOptions(userMode bool, opts Options) {
 	/* # reflect fonts-config syconfig variables or
 	   # parameters in fontconfig setting to control rendering */
-	renderFile := ConfigLocation("rd", userMode)
+	renderFile := GenConfigLocation("render", userMode)
 
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Generating %s.\n", renderFile))
 	renderText := genRenderingOptions(opts, userMode)
 
-	err := ioutil.WriteFile(renderFile, []byte(renderText), 0644)
+	err := persist(renderFile, []byte(renderText), 0644)
 	if err != nil {
 		log.Fatalf("Can not write %s: %s\n", renderFile, err.Error())
 	}
 }
 
 func genRenderingOptions(opts Options, userMode bool) string {
-	config := genConfigPreamble(userMode, "<!-- using target=\"pattern\", because we want to change pattern in 60-family-prefer.conf\n\tregarding to this setting -->\n")
+	config := ""
 	config += genStringOptionConfig(opts.Verbosity, opts.ForceHintstyle, "Forcing hintstyle:",
-		"<!-- Choose prefered common hinting style here.  -->\n<!-- Possible values: no, hitnone, hitslight, hintmedium and hintfull. -->\n<!-- Can be overriden with some other options, e. g. force_bw\n\tor force_bw_monospace => hintfull -->\n",
+		"<!-- Choose preferred common hinting style here.  -->\n<!-- Possible values: no, hitnone, hitslight, hintmedium and hintfull. -->\n<!-- Can be overridden with some other options, e. g. force_bw\n\tor force_bw_monospace => hintfull -->\n",
 		"force_hintstyle", false, true)
 	config += genBoolOptionConfig(opts.Verbosity, opts.ForceAutohint, "Forcing autohint:",
 		"<!-- Force autohint always. -->\n<!-- If false, for well hinted fonts, their instructions are used for rendering. -->\n",
@@ -78,8 +77,11 @@ func genRenderingOptions(opts Options, userMode bool) string {
 		"<!-- Search for metric compatible families? -->\n",
 		"search_metric_aliases", false)
 	config += genUserInclude(userMode)
-	config += "</fontconfig>\n"
-	return config
+	if len(config) == 0 {
+		return config
+	}
+	return genConfigPreamble(userMode, "<!-- using target=\"pattern\", because we want to change pattern in 60-family-prefer.conf\n\tregarding to this setting -->\n") +
+		config + "</fontconfig>\n"
 }
 
 // validStringOption return false if a string is "null", has suffix "none" or just empty.
@@ -93,7 +95,7 @@ func validStringOption(opt string) bool {
 // genConfigPreamble generate fontconfig preamble
 func genConfigPreamble(userMode bool, comment string) string {
 	config := "<?xml version=\"1.0\"?>\n<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n\n<!-- DO NOT EDIT; this is a generated file -->\n<!-- modify "
-	config += ConfigLocation("fc", false)
+	config += GenConfigLocation("fc", false)
 	config += " && run /usr/bin/fonts-config "
 	if userMode {
 		config += "-\\-user "

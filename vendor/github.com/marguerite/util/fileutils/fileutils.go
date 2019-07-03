@@ -27,22 +27,13 @@ func Touch(path string) error {
 }
 
 // Remove remove a file
-func Remove(f string, verbosity int) error {
-	if _, err := os.Stat(f); !os.IsNotExist(err) {
-		err := os.Remove(f)
-		if err != nil {
-			if verbosity >= Debug {
-				fmt.Printf("--- WARNING: can not delete %s\n", f)
-			}
-			return err
-		}
-		if verbosity >= Debug {
-			fmt.Printf("--- %s deleted.\n", f)
-		}
-	} else {
-		if verbosity >= Debug {
-			fmt.Printf("--- WARNING: %s does not exist, can't delete.\n", f)
-		}
+func Remove(f string) error {
+	if _, err := os.Stat(f); os.IsNotExist(err) {
+		return fmt.Errorf("Error 1: %s doesn't exist.\n", f)
+	}
+	err := os.Remove(f)
+	if err != nil {
+		return fmt.Errorf("Error 2: can not delete %s, patherr: %s.\n", f, err.Error())
 	}
 	return nil
 }
