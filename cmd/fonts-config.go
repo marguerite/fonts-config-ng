@@ -101,7 +101,7 @@ func getUserPrefix(userMode bool, verbosity int) string {
 		return ""
 	}
 	prefix := filepath.Join(lib.GetEnv("HOME"), ".config/fontconfig")
-	err := dirutils.MkdirP(prefix, verbosity)
+	err := dirutils.MkdirP(prefix)
 	if err != nil {
 		log.Fatalf("Can not create %s: %s\n", prefix, err.Error())
 	}

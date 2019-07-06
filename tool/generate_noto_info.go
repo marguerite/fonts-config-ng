@@ -41,7 +41,7 @@ func main() {
 	re := regexp.MustCompile(`([^\/]+)-fonts.*$`)
 	wg := &sync.WaitGroup{}
 	mux := &sync.Mutex{}
-	files, _ := dirutils.Ls(pkgDir, "file")
+	files, _ := dirutils.Ls(pkgDir)
 
 	for _, v := range files {
 		if strings.HasPrefix(filepath.Base(v), "noto-") {

@@ -101,7 +101,7 @@ func mtimeDifferOrMissing(src, dst string) bool {
 
 func createSymlink(d string) error {
 	forbiddenChars := []string{" ", ":"}
-	files, _ := dirutils.Ls(d, "file")
+	files, _ := dirutils.Ls(d)
 	for _, f := range files {
 		for _, v := range forbiddenChars {
 			if strings.Contains(f, v) {

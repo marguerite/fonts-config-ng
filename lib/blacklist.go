@@ -15,7 +15,7 @@ import (
 
 // ReadFontFilesFromDir read font files from specific dir
 func ReadFontFilesFromDir(d string, emoji bool) []string {
-	files, _ := dirutils.Ls(d, "file")
+	files, _ := dirutils.Ls(d)
 	fonts := []string{}
 
 	for _, f := range files {
