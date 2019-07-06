@@ -2,13 +2,13 @@
 github.com/golang/freetype
 github.com/golang/freetype/raster
 github.com/golang/freetype/truetype
-# github.com/marguerite/util v0.0.0-20190630043715-49d579a866cf
+# github.com/marguerite/util v0.0.0-20190706042717-4f046b896975
 github.com/marguerite/util/dirutils
 github.com/marguerite/util/fileutils
 github.com/marguerite/util/slice
 github.com/marguerite/util/command
 # github.com/urfave/cli v1.20.0
 github.com/urfave/cli
-# golang.org/x/image v0.0.0-20190622003408-7e034cad6442
+# golang.org/x/image v0.0.0-20190703141733-d6a02ce849c9
 golang.org/x/image/font
 golang.org/x/image/math/fixed
