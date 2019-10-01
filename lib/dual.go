@@ -37,9 +37,7 @@ func dualSpacing(spacing, outline string) int {
 }
 
 func fixDualSpacing(userMode bool) string {
-	localFonts := ReadFontFilesFromDir(filepath.Join(GetEnv("HOME"), ".fonts"), false)
-	fonts := ReadFontFilesFromDir("/usr/share/fonts/truetype", false)
-	slice.Concat(&fonts, localFonts)
+	fonts := ReadFontFiles()
 	comment := "<!-- The dual-width Asian fonts (spacing=dual) are not rendered correctly," +
 		"apparently FreeType forces all widths to match.\n" +
 		"Trying to disable the width forcing code by setting globaladvance=false alone doesn't help.\n" +

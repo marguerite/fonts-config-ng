@@ -179,7 +179,7 @@ func generateTTCap(fontScales *FontScaleEntries, opts Options) {
 	for _, f := range *fontScales {
 		// don't touch existing TTCap options.
 		if re.MatchString(f.XLFD) {
-			if !fileutils.HasPrefixSuffixInGroup(f.Font, suffix, false) {
+			if !fileutils.HasPrefixOrSuffix(f.Font, suffix) {
 				// the freetype module handles TrueType, OpenType, and Type1 fonts.
 				continue
 			}
@@ -225,7 +225,7 @@ func generateTTCap(fontScales *FontScaleEntries, opts Options) {
 	// add bw=0.5 option when necessary:
 	for _, f := range *fontScales {
 
-		if !fileutils.HasPrefixSuffixInGroup(f.Font, suffix, false) {
+		if !fileutils.HasPrefixOrSuffix(f.Font, suffix) {
 			// the freetype module handles TrueType, OpenType, and Type1 fonts.
 			continue
 		}
@@ -385,7 +385,7 @@ func fixFontScales(d string, opts Options) error {
 
 	for _, f := range handmadeScales {
 		suffix := []string{".swp", ".bak", ".sav", ".save", ".rpmsave", ".rpmorig", ".rpmnew"}
-		if fileutils.HasPrefixSuffixInGroup(f, suffix, false) {
+		if fileutils.HasPrefixOrSuffix(f, suffix) {
 			debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("%s is considered a backup file, ignored.\n", f))
 			continue
 		}

@@ -179,7 +179,7 @@ func generateSourceHanAlias(fonts []string, sans, serif, mono map[string][]strin
 
 	for _, f := range fonts {
 		fa := strings.Split(f, " ")
-		if fileutils.HasPrefixSuffixInGroup(fa[len(fa)-1], []string{"Sans", "Serif", "HW"}, false) {
+		if fileutils.HasPrefixOrSuffix(fa[len(fa)-1], []string{"Sans", "Serif", "HW"}) {
 			fa = append(fa, "J")
 		}
 		lang := fa[len(fa)-1]
@@ -193,11 +193,11 @@ func generateSourceHanAlias(fonts []string, sans, serif, mono map[string][]strin
 			"HW":    make([]string, 0)}
 		str := "\t<alias>\n\t\t<family>" + f + "</family>\n"
 
-		if fileutils.HasPrefixSuffixInGroup(lang, regionSuffix, false) {
+		if fileutils.HasPrefixOrSuffix(lang, regionSuffix) {
 			str += "\t\t<accept>\n\t\t\t<family>" + familyMap[variant] + "</family>\n\t\t</accept>\n"
 		}
 
-		if fileutils.HasPrefixSuffixInGroup(lang, otcSuffix, false) {
+		if fileutils.HasPrefixOrSuffix(lang, otcSuffix) {
 			if variant == "HW" {
 				str += "\t\t<accept>\n"
 			} else {

@@ -13,26 +13,6 @@ import (
 	"sync"
 )
 
-// ReadFontFilesFromDir read font files from specific dir
-func ReadFontFilesFromDir(d string, emoji bool) []string {
-	files, _ := dirutils.Ls(d)
-	fonts := []string{}
-
-	for _, f := range files {
-		file := filepath.Base(f)
-		if fileutils.HasPrefixSuffixInGroup(file, []string{"fonts", "."}, true) || strings.HasSuffix(file, ".dir") {
-			continue
-		}
-		if emoji && strings.Contains(file, "Emoji") {
-			fonts = append(fonts, f)
-		}
-		if !emoji && !strings.Contains(file, "Emoji") {
-			fonts = append(fonts, f)
-		}
-	}
-	return fonts
-}
-
 func generateBlacklistConfig(f EnhancedFont) string {
 	conf := "\t<match target=\"scan\">\n\t\t<test name=\"family\">\n\t\t\t<string>" + f.Name[0] + "</string>\n\t\t</test>\n"
 	if !(f.Width == 0 && f.Weight == 0 && f.Slant == 0) {
@@ -62,7 +42,7 @@ func appendBlacklist(b EnhancedFonts, f EnhancedFont) EnhancedFonts {
 }
 
 func getEmojiFontFilesByName(emojis string) []string {
-	emojiFonts := ReadFontFilesFromDir("/usr/share/fonts/truetype", true)
+	emojiFonts := ReadFontFiles("Emoji")
 	matched := []string{}
 	m := make(map[string]string)
 	for _, v := range emojiFonts {
