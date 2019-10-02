@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-func generateBlacklistConfig(f EnhancedFont) string {
+func generateBlacklistConfig(f Collection) string {
 	conf := "\t<match target=\"scan\">\n\t\t<test name=\"family\">\n\t\t\t<string>" + f.Name[0] + "</string>\n\t\t</test>\n"
 	if !(f.Width == 0 && f.Weight == 0 && f.Slant == 0) {
 		if f.Width != 100 {
@@ -29,7 +29,7 @@ func generateBlacklistConfig(f EnhancedFont) string {
 	return conf
 }
 
-func appendBlacklist(b EnhancedFonts, f EnhancedFont) EnhancedFonts {
+func appendBlacklist(b Collection, f Font) Collection {
 	if i, ok := b.Contains(f); ok {
 		b[i].AppendCharset(f.Charset)
 	} else {
@@ -64,7 +64,7 @@ func GenerateEmojiBlacklist(userMode bool, opts Options) {
 	slice.Remove(&nonEmojiFonts, ReadFontFiles("Emoji"))
 	emojiFonts := getEmojiFontFilesByName(opts.SystemEmojis)
 	emojiCharset := BuildEmojiCharset(emojiFonts)
-	blacklist := EnhancedFonts{}
+	blacklist := Collection{}
 
 	debug(opts.Verbosity, VerbosityDebug, "Blacklisting glyphs from system emoji fonts in non-emoji fonts.\n")
 

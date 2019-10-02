@@ -3,54 +3,70 @@ package lib
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/marguerite/util/dirutils"
+	"github.com/marguerite/util/fileutils"
 	"github.com/marguerite/util/slice"
-	"os"
+	"log"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 )
 
-// Style font's width, weight and slant
-type Style struct {
-	Width  int
-	Weight int
-	Slant  int
-}
-
-// Load font width/weight/slant
-func (s *Style) Load(fontFile string) {
-	raw, _ := exec.Command("/usr/bin/fc-scan", fontFile).Output()
-	widthR := regexp.MustCompile(`(?m)width:\s(\d+)`)
-	weightR := regexp.MustCompile(`(?m)weight:\s(\d+)`)
-	slantR := regexp.MustCompile(`(?m)slant:\s(\d+)`)
-
-	var width, weight, slant int
-	if widthR.MatchString(string(raw)) {
-		width, _ = strconv.Atoi(widthR.FindStringSubmatch(string(raw))[1])
-		s.Width = width
-	}
-	if weightR.MatchString(string(raw)) {
-		weight, _ = strconv.Atoi(weightR.FindStringSubmatch(string(raw))[1])
-		s.Weight = weight
-	}
-	if slantR.MatchString(string(raw)) {
-		slant, _ = strconv.Atoi(slantR.FindStringSubmatch(string(raw))[1])
-		s.Slant = slant
-	}
-}
-
-// Font struct contains various font informations.
-type Font struct {
-	Name    []string
-	Lang    []string
-	Hinting bool
-}
-
-// Collection a collection of Font bundled in one rpm.
+//Collection A collection of type Font
 type Collection []Font
+
+//NewCollection Initialize a new collection of type Font from a font file.
+func NewCollection(file string) Collection {
+	out, err := exec.Command("/usr/bin/fc-scan", file).Output()
+	if err != nil {
+		log.Fatal("Can't run 'fc-scan " + file + "'.")
+	}
+
+	c := Collection{}
+	hint, _ := Hinting(file)
+	charset := BuildCharset(file)
+
+	re := regexp.MustCompile(`(?ms)Pattern has(.*?)^\n`)
+	match := re.FindAllStringSubmatch(string(out), -1)
+
+	for _, m := range match {
+		name := parseFontNames(m[1])
+		lang := parseFontLangs(m[1])
+		width, weight, slant := parseFontStyle(m[1])
+		c = append(c, Font{name, lang, file, hint, width, weight, slant, charset})
+	}
+
+	return c
+}
+
+//GetFontPaths Get Fonts' path information
+//  It can restrict the results by path with "string" or "*regexp.Regexp".
+func (c Collection) GetFontPaths(restricts ...interface{}) []string {
+	paths := []string{}
+	for _, font := range c {
+		if path, err := restrictPath(font.Path, restricts...); err == nil {
+			paths = append(paths, path)
+		}
+	}
+	return paths
+}
+
+//Contains if an element of the Collection has the same name and style with the provided Font
+func (c Collection) Contains(f Font) (int, bool) {
+	fv := reflect.ValueOf(f)
+	for i, j := range c {
+		if reflect.DeepEqual(reflect.ValueOf(j).FieldByName("Name").Interface(), fv.FieldByName("Name").Interface()) &&
+			reflect.DeepEqual(reflect.ValueOf(j).FieldByName("Width").Interface(), fv.FieldByName("Width").Interface()) &&
+			reflect.DeepEqual(reflect.ValueOf(j).FieldByName("Weight").Interface(), fv.FieldByName("Weight").Interface()) &&
+			reflect.DeepEqual(reflect.ValueOf(j).FieldByName("Slant").Interface(), fv.FieldByName("Slant").Interface()) {
+			return i, true
+		}
+	}
+	return 0, false
+}
 
 // Encode encode Collections to json
 func (c Collection) Encode() ([]byte, error) {
@@ -67,7 +83,26 @@ func (c *Collection) Decode(b []byte) error {
 	return err
 }
 
-// Charset font charset
+//Font Struct contains various font informations
+type Font struct {
+	Name    []string
+	Lang    []string
+	Path    string
+	Hinting bool
+	Width   int
+	Weight  int
+	Slant   int
+	Charset
+}
+
+//AppendCharset append charset to an existing Font
+func (f *Font) AppendCharset(c Charset) {
+	c1 := f.Charset
+	slice.Concat(&c1, c)
+	f.Charset = c1
+}
+
+//Charset Font's Charset
 type Charset []string
 
 func (c Charset) Len() int { return len(c) }
@@ -80,326 +115,115 @@ func (c Charset) Less(i, j int) bool {
 	return a < b
 }
 
-// EnhancedFont with Charset and Style
-type EnhancedFont struct {
-	Font
-	Charset
-	Style
-}
-
-// AppendCharset append charset to an existing EnhancedFont
-func (e *EnhancedFont) AppendCharset(c Charset) {
-	c1 := e.Charset
-	slice.Concat(&c1, c)
-	e.Charset = c1
-}
-
-// EnhancedFonts a slice of EnhancedFont
-type EnhancedFonts []EnhancedFont
-
-// Contains if an element of the EnhancedFonts has the same name and style with the provided EnhancedFont
-func (e EnhancedFonts) Contains(f EnhancedFont) (int, bool) {
-	fv := reflect.ValueOf(f)
-	for i, j := range e {
-		if reflect.DeepEqual(reflect.ValueOf(j).FieldByName("Name").Interface(), fv.FieldByName("Name").Interface()) &&
-			reflect.DeepEqual(reflect.ValueOf(j).FieldByName("Style").Interface(), fv.FieldByName("Style").Interface()) {
-			return i, true
-		}
-	}
-	return 0, false
-}
-
-// fix AR PL UMing/AR PL UKai fonts
-func fixARPLFont(s *string) {
-	if strings.HasPrefix(*s, "AR PL") {
-		n := ""
-		for _, v := range strings.Split(*s, "AR PL") {
-			if len(v) > 0 {
-				n += "AR PL" + v + ","
+func parseFontNames(data string) []string {
+	names := []string{}
+	reFamily := regexp.MustCompile(`family: (.*)\n`)
+	match := reFamily.FindAllStringSubmatch(data, -1)
+	for _, m := range match {
+		raw := strings.Replace(m[1], "(s)", "", -1)
+		candidates := strings.Split(raw, "\"")
+		for _, c := range candidates {
+			// sometimes the len of candidate is 1, but is useless for a font name anyway
+			if len(c) > 1 && !strings.HasSuffix(c, "Regular") && !strings.HasSuffix(c, "Book") {
+				names = append(names, c)
 			}
 		}
-		n = strings.TrimRight(n, ",")
-		*s = n
 	}
+	slice.Unique(&names)
+	return names
 }
 
-// fix WQY Zen Hei/WQY Micro Hei fonts
-func fixWQYFont(s *string) {
-	if strings.HasPrefix(*s, "文泉") {
-		n := ""
-		re := regexp.MustCompile(`文泉[^文泉]+`)
-		for _, v := range strings.Split(*s, ",") {
-			m := re.FindAllStringSubmatch(v, -1)
-			if len(m) > 1 {
-				for _, i := range m {
-					n += i[0] + ","
+func parseFontLangs(data string) []string {
+	langs := []string{}
+	reLang := regexp.MustCompile(`[^ey]lang: ([^(]+)`)
+	match := reLang.FindAllStringSubmatch(string(data), -1)
+	for _, m := range match {
+		for _, lang := range strings.Split(m[1], "|") {
+			langs = append(langs, lang)
+		}
+	}
+	slice.Unique(langs)
+	return langs
+}
+
+func parseFontStyle(data string) (int, int, int) {
+	reStyle := regexp.MustCompile(`(width|weight|slant): (\d+)`)
+	match := reStyle.FindAllStringSubmatch(data, -1)
+	width := 0
+	weight := 0
+	slant := 0
+	for _, m := range match {
+		switch m[1] {
+		case "width":
+			width, _ = strconv.Atoi(m[2])
+		case "weight":
+			weight, _ = strconv.Atoi(m[2])
+		default:
+			slant, _ = strconv.Atoi(m[2])
+		}
+	}
+	return width, weight, slant
+}
+
+//LoadFonts Incrementally load global and local fonts.
+// It can restrict the results by path with "string" or "*regexp.Regexp".
+func LoadFonts(c Collection, restricts ...interface{}) Collection {
+	newCollection := c
+	// Existing collection
+	pathsExisting := c.GetFontPaths(restricts...)
+	// Installed Fonts
+	fontsInstalled := GetFontsInstalled(restricts...)
+
+	slice.Remove(&fontsInstalled, pathsExisting)
+
+	for _, font := range fontsInstalled {
+		slice.Concat(&newCollection, NewCollection(font))
+	}
+
+	return newCollection
+}
+
+func restrictPath(path string, restricts ...interface{}) (string, error) {
+	if len(restricts) == 0 {
+		return path, nil
+	}
+
+	_, ok := restricts[0].(*regexp.Regexp)
+	if reflect.ValueOf(restricts[0]).Kind() != reflect.String && !ok {
+		return "", fmt.Errorf("Restrict term must be of type 'string' or '*regexp.Regexp'.")
+	}
+
+	base := filepath.Base(path)
+
+	for _, restrict := range restricts {
+		if ok {
+			if restrict.(*regexp.Regexp).MatchString(base) {
+				return path, nil
+			}
+		} else {
+			if strings.Contains(base, restrict.(string)) {
+				return path, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("No matched path found.")
+}
+
+//GetFontsInstalled Get all font files installed on your system
+// It can restrict the results by path with "string" or "*regexp.Regexp".
+func GetFontsInstalled(restricts ...interface{}) []string {
+	local := filepath.Join(GetEnv("HOME"), ".fonts")
+	candidates := []string{}
+
+	for _, dir := range []string{local, "/usr/share/fonts"} {
+		fonts, _ := dirutils.Ls(dir)
+		for _, font := range fonts {
+			if fileutils.HasPrefixOrSuffix(filepath.Base(font), "font", ".", ".dir") == 0 {
+				if path, err := restrictPath(font, restricts...); err == nil {
+					candidates = append(candidates, font)
 				}
-			} else {
-				n += v + ","
-			}
-		}
-		n = strings.TrimRight(n, ",")
-		*s = n
-	}
-}
-
-func fixFontName(s *string) {
-	fixARPLFont(s)
-	fixWQYFont(s)
-}
-
-// GetFontName get font name
-func GetFontName(fontFile string) []string {
-	out, _ := exec.Command("/usr/bin/fc-scan", "--format", "%{family}", fontFile).Output()
-	names := string(out)
-	fixFontName(&names)
-	if strings.Contains(names, ",") {
-		s := strings.Split(names, ",")
-		// strip Regular/Book
-		for i := 1; i < len(s); i++ {
-			if strings.HasSuffix(s[i], "Regular") || strings.HasSuffix(s[i], "Book") {
-				s = append(s[:i], s[i+1:]...)
-			}
-		}
-		return s
-	}
-	return []string{names}
-}
-
-// GetFontLang get font languages
-func GetFontLang(fontFile string) []string {
-	langs, _ := exec.Command("/usr/bin/fc-scan", "--format", "%{lang}", fontFile).Output()
-	if strings.Contains(string(langs), "|") {
-		s := strings.Split(string(langs), "|")
-		return s
-	}
-	return []string{string(langs)}
-}
-
-// ParseFontInfoFromFile read various font infos with fc-scan
-func ParseFontInfoFromFile(ttf string) Font {
-	ok, _ := Hinting(ttf)
-	return Font{GetFontName(ttf), GetFontLang(ttf), ok}
-}
-
-// GenericFamily find generic name through font name
-func GenericFamily(fontName string) string {
-	if strings.Contains(fontName, " Symbols") {
-		return "symbol"
-	}
-	if strings.Contains(fontName, " Mono") || strings.Contains(fontName, " HW") {
-		return "monospace"
-	}
-	if strings.HasSuffix(fontName, "Emoji") {
-		return "emoji"
-	}
-	if strings.Contains(fontName, " Serif") {
-		return "serif"
-	}
-	return "sans-serif"
-}
-
-// GetUnstyledFontName pick unstyled font names
-func GetUnstyledFontName(f Font) []string {
-	names := f.Name
-	s, _ := slice.ShortestString(names)
-	slice.Remove(&names, s)
-	// trim "Noto Sans Display UI"
-	if strings.HasSuffix(s, "UI") {
-		s = strings.TrimRight(s, " UI")
-	}
-	out := []string{s}
-	for _, n := range names {
-		if !strings.Contains(n, s) {
-			out = append(out, n)
-		}
-	}
-
-	return out
-}
-
-// GenerateDefaultFamily return a default family fontconfig block
-func GenerateDefaultFamily(fontName string) string {
-	return "\t<alias>\n\t\t<family>" + fontName + "</family>\n\t\t<default>\n\t\t\t<family>" +
-		GenericFamily(fontName) + "</family>\n\t\t</default>\n\t</alias>\n\n"
-}
-
-func generateFontTypeByHinting(fontName string, hinting bool) string {
-	txt := "\t<match target=\"font\">\n\t\t<test name=\"family\">\n\t\t\t<string>" + fontName + "</string>\n\t\t</test>\n"
-	txt += "\t\t<edit name=\"font_type\" mode=\"assign\">\n\t\t\t<string>"
-	if hinting {
-		txt += "TT Instructed Font"
-	} else {
-		txt += "NON TT Instructed Font"
-	}
-	txt += "</string>\n\t\t</edit>\n\t</match>\n\n"
-	return txt
-}
-
-// GenerateFontTypeByHinting generate font_type block based on hinting
-func GenerateFontTypeByHinting(f Font) string {
-	if len(f.Name) > 1 {
-		txt := ""
-		for _, v := range f.Name {
-			txt += generateFontTypeByHinting(v, f.Hinting)
-		}
-		return txt
-	}
-	return generateFontTypeByHinting(f.Name[0], f.Hinting)
-}
-
-// GenerateFamilyPreferListForLang generate family preference list of fonts for a generic font name
-// and a specific language
-func GenerateFamilyPreferListForLang(generic, lang string, fonts []string) string {
-	txt := "\t<match>\n\t\t<test name=\"family\">\n\t\t\t<string>" + generic + "</string>\n\t\t</test>\n"
-	txt += "\t\t<test name=\"lang\">\n\t\t\t<string>" + lang + "</string>\n\t\t</test>\n"
-	txt += "\t\t<edit name=\"family\" mode=\"prepend\">\n"
-	for _, f := range fonts {
-		txt += "\t\t\t<string>" + f + "</string>\n"
-	}
-	txt += "\t\t</edit>\n\t</match>\n\n"
-	return txt
-}
-
-func extractCharsetRange(s string) []string {
-	r := []string{}
-	// some Simplified Chinese contains 2fa15-2fa1c20-7e, which is actually
-	// 3 loops of a same charset. the break point is not "-7e", but "20-7e",
-	// which is the begin char of the next loop
-	// eg: fc-scan --format "%{charset}" /usr/share/fonts/truetype/wqy-zenhei.ttc
-	re := regexp.MustCompile(`^(\w+)-(\w+)(20-7[0-9a-f])?$`)
-	m := re.FindStringSubmatch(s)
-	start, _ := strconv.ParseInt(m[1], 16, 0)
-	stop, _ := strconv.ParseInt(m[2], 16, 0)
-	for i := start; i <= stop; i++ {
-		r = append(r, fmt.Sprintf("%x", i))
-	}
-	return r
-}
-
-func createPlainCharset(charset []string) Charset {
-	c := Charset{}
-	// unique the ranged charset string to reduce calculation
-	slice.Unique(&charset)
-	for _, char := range charset {
-		if strings.Contains(char, "-") {
-			for _, r := range extractCharsetRange(char) {
-				c = append(c, r)
-			}
-		} else {
-			c = append(c, char)
-		}
-	}
-	return c
-}
-
-func substractChar(c1, c2 string) int64 {
-	a, _ := strconv.ParseInt(c1, 16, 0)
-	b, _ := strconv.ParseInt(c2, 16, 0)
-	return a - b
-}
-
-// BuildCharset build charset array of a font
-func BuildCharset(f string) Charset {
-	if _, err := os.Stat(f); !os.IsNotExist(err) {
-		out, e := exec.Command("/usr/bin/fc-scan", "--format", "%{charset}", f).Output()
-		ErrChk(e)
-		return createPlainCharset(strings.Split(string(out), " "))
-	}
-	return Charset{}
-}
-
-// BuildEmojiCharset build charset array of a emoji font
-func BuildEmojiCharset(f []string) Charset {
-	charset := Charset{}
-
-	for _, v := range f {
-		slice.Concat(&charset, BuildCharset(v))
-	}
-
-	slice.Unique(&charset)
-
-	/* common emojis that almost every font has
-	   "#","*","0","1","2","3","4","5","6","7","8","9","©","®","™"," ",
-	   "‼","↔","↕","↖","↗","↘","↙","▪","▫","☀","⁉","ℹ",
-	   "▶","◀","☑","↩","↪","➡","⬅","⬆","⬇","♀","♂" */
-	commonEmoji := Charset{"0", "20", "23", "2a", "30", "31", "32", "33", "34", "35", "36", "37",
-		"38", "39", "a9", "ae", "200d", "203c", "2049", "20e3", "2122",
-		"2139", "2194", "2195", "2196", "2197", "2198", "2199", "21a9",
-		"21aa", "25aa", "25ab", "25b6", "25c0", "2600", "2611", "2640",
-		"2642", "27a1", "2b05", "2b06", "2b07"}
-	slice.Remove(&charset, commonEmoji)
-	return charset
-}
-
-// IntersectCharset build intersected charset array of two fonts
-func IntersectCharset(charset, emoji Charset) Charset {
-	in := charset
-	slice.Intersect(&in, emoji)
-	sort.Sort(in)
-	return RangedCharset(in)
-}
-
-// RangedCharset convert int to range in charset
-func RangedCharset(c Charset) Charset {
-	if len(c) < 2 {
-		return c
-	}
-
-	charset := Charset{}
-
-	sort.Sort(c)
-	idx := -1
-
-	for i := 0; i < len(c); i++ {
-		if i == len(c)-1 {
-			if idx >= 0 && substractChar(c[i], c[i-1]) == 1 {
-				charset = append(charset, c[idx]+".."+c[i])
-			} else {
-				charset = append(charset, c[i])
-			}
-			continue
-		}
-
-		if substractChar(c[i+1], c[i]) == 1 {
-			if idx < 0 {
-				idx = i
-			}
-		} else {
-			if idx >= 0 {
-				charset = append(charset, c[idx]+".."+c[i])
-				idx = -1
-			} else {
-				charset = append(charset, c[i])
 			}
 		}
 	}
-
-	return charset
-}
-
-// ConcatCharset concat two charsets into one
-func ConcatCharset(c1, c2 Charset) Charset {
-	c1 = createPlainCharset(c1)
-	c2 = createPlainCharset(c2)
-	slice.Concat(&c1, c2)
-	return RangedCharset(c1)
-}
-
-// CharsetToFontConfig convert Charset to fontconfig conf
-func CharsetToFontConfig(c Charset) string {
-	str := "\t\t\t\t<charset>\n"
-	for _, v := range c {
-		if strings.Contains(v, "..") {
-			str += "\t\t\t\t\t<range>\n"
-			for _, s := range strings.Split(v, "..") {
-				str += "\t\t\t\t\t\t<int>0x" + s + "</int>\n"
-			}
-			str += "\t\t\t\t\t</range>\n"
-		} else {
-			str += "\t\t\t\t\t<int>0x" + v + "</int>\n"
-		}
-	}
-	str += "\t\t\t\t</charset>\n"
-	return str
+	return candidates
 }
