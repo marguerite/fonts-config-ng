@@ -4,43 +4,55 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 )
 
-// Debug a trigger for debug output
-const Debug int = 256
-
-// Search search if an executable exists
-func Search(cmd string, verbosity int) (string, bool) {
-	if _, err := os.Stat(cmd); os.IsNotExist(err) {
-		if verbosity >= Debug {
-			fmt.Printf("--- WARNING: no executable from %s found\n", cmd)
-		}
-		return cmd, false
+// Environ safely get an environment variable
+func Environ(env string) (string, error) {
+	val, ok := os.LookupEnv(env)
+	if !ok {
+		return "", fmt.Errorf("%s not set.", env)
 	}
-	return cmd, true
+	if len(val) == 0 {
+		return val, fmt.Errorf("%s is empty.", env)
+	}
+	return val, nil
 }
 
-func cmdOptionToString(opts []string) string {
-	str := ""
-	for _, s := range opts {
-		str += s + " "
+// Search if an executable exists
+func Search(cmd string) (string, error) {
+	f, err := os.Stat(cmd)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// look in $Path
+			f1, err1 := exec.LookPath(cmd)
+			if err1 != nil {
+				return "", fmt.Errorf("%s doesn't exist in current directory or $PATH.", cmd)
+			}
+			return f1, nil
+		} else {
+			return "", fmt.Errorf("Another unhandled non-IsNotExist PathError occurs %s", err.Error())
+		}
 	}
-	return str
+	if f.IsDir() {
+		return "", fmt.Errorf("%s is a directory", cmd)
+	}
+	if isExecutable(f) {
+		return cmd, nil
+	}
+	return "", fmt.Errorf("%s is a file but has no exec permission", cmd)
 }
 
 // Run run command with options, returns output, ExitStatus and error
-func Run(cmd string, opts []string, verbosity int) (string, int, error) {
+func Run(cmd string, opts ...string) (string, int, error) {
 	out, err := exec.Command(cmd, opts...).Output()
-	status := 0
 
-	if verbosity >= Debug {
-		fmt.Printf("--- executing: %s %s\n", cmd, cmdOptionToString(opts))
-	}
+	fmt.Printf("Executing: %s %s\n", cmd, strings.Join(opts, " "))
 
 	if err != nil {
-		if msg, ok := err.(*exec.Error); ok {
-			return string(out), -1, fmt.Errorf(msg.Error())
+		if _, ok := err.(*exec.Error); ok {
+			return string(out), -1, err
 		}
 
 		if msg, ok := err.(*exec.ExitError); ok {
@@ -52,5 +64,5 @@ func Run(cmd string, opts []string, verbosity int) (string, int, error) {
 		return string(out), -1, err
 	}
 
-	return string(out), status, err
+	return string(out), 0, nil
 }

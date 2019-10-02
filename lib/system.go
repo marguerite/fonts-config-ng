@@ -9,14 +9,16 @@ import (
 
 // FcCache run fc-cache command on the running system
 func FcCache(verbosity int) {
-	if cmd, ok := command.Search("/usr/bin/fc-cache", verbosity); ok {
-		cmdOpts := []string{}
-		if verbosity >= VerbosityVerbose {
-			cmdOpts = append(cmdOpts, "--verbose")
-		}
+	if cmd, err := command.Search("/usr/bin/fc-cache"); err == nil {
 		debug(verbosity, VerbosityVerbose, "Creating fontconfig cache files.\n")
 
-		_, status, _ := command.Run(cmd, cmdOpts, verbosity)
+		opts := ""
+
+		if verbosity >= VerbosityVerbose {
+			opts = "--verbose"
+		}
+
+		_, status, _ := command.Run(cmd, opts)
 
 		debug(verbosity, VerbosityDebug, fmt.Sprintf("Exit status of fc-cache: %d\n", status))
 	}
@@ -24,14 +26,13 @@ func FcCache(verbosity int) {
 
 // FpRehash run xset fp rehash on the running system
 func FpRehash(verbosity int) {
-	if cmd, ok := command.Search("/usr/bin/xset", verbosity); ok {
+	if cmd, err := command.Search("/usr/bin/xset"); err == nil {
 		re := regexp.MustCompile(`^:\d.*$`)
 		if re.MatchString(GetEnv("DISPLAY")) {
-			cmdOpts := []string{"fp", "rehash"}
 			debug(verbosity, VerbosityVerbose, "Rereading the font databases in the current font path ...\n")
 			debug(verbosity, VerbosityDebug, "Running xset fp rehash\n")
 
-			out, _, _ := command.Run(cmd, cmdOpts, verbosity)
+			out, _, _ := command.Run(cmd, "fp", "rehash")
 			debug(verbosity, VerbosityDebug, string(out)+"\n")
 		} else {
 			debug(verbosity, VerbosityVerbose, "It is not a local display, do not reread X font databases for now.\n")
@@ -42,13 +43,12 @@ func FpRehash(verbosity int) {
 
 // ReloadXfsConfig reload Xorg Font Server on the running system
 func ReloadXfsConfig(verbosity int) {
-	if cmd, ok := command.Search("/usr/bin/ps", verbosity); ok {
-		cmdOpts := []string{"-C", "xfs", "-o", "pid="}
-		pid, _, _ := command.Run(cmd, cmdOpts, verbosity)
+	if cmd, err := command.Search("/usr/bin/ps"); err == nil {
+		pid, _, _ := command.Run(cmd, "-C", "xfs", "-o", "pid=")
 		pid = strings.TrimSpace(pid)
 		if len(pid) != 0 {
 			debug(verbosity, VerbosityVerbose, fmt.Sprintf("Reloading config file of X Font Server %s ...\n", pid))
-			command.Run("/usr/bin/pkill", []string{"-USR1", pid}, verbosity)
+			command.Run("/usr/bin/pkill", "-USR1", pid)
 		} else {
 			debug(verbosity, VerbosityDebug, "X Font Server not used.\n")
 		}

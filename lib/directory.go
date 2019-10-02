@@ -179,7 +179,7 @@ func generateTTCap(fontScales *FontScaleEntries, opts Options) {
 	for _, f := range *fontScales {
 		// don't touch existing TTCap options.
 		if re.MatchString(f.XLFD) {
-			if !fileutils.HasPrefixOrSuffix(f.Font, suffix) {
+			if fileutils.HasPrefixOrSuffix(f.Font, suffix) == 0 {
 				// the freetype module handles TrueType, OpenType, and Type1 fonts.
 				continue
 			}
@@ -225,7 +225,7 @@ func generateTTCap(fontScales *FontScaleEntries, opts Options) {
 	// add bw=0.5 option when necessary:
 	for _, f := range *fontScales {
 
-		if !fileutils.HasPrefixOrSuffix(f.Font, suffix) {
+		if fileutils.HasPrefixOrSuffix(f.Font, suffix) == 0 {
 			// the freetype module handles TrueType, OpenType, and Type1 fonts.
 			continue
 		}
@@ -385,7 +385,7 @@ func fixFontScales(d string, opts Options) error {
 
 	for _, f := range handmadeScales {
 		suffix := []string{".swp", ".bak", ".sav", ".save", ".rpmsave", ".rpmorig", ".rpmnew"}
-		if fileutils.HasPrefixOrSuffix(f, suffix) {
+		if fileutils.HasPrefixOrSuffix(f, suffix) != 0 {
 			debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("%s is considered a backup file, ignored.\n", f))
 			continue
 		}
@@ -426,7 +426,7 @@ func checkScaleAndDirUpdate(dst, timestamp, fontScale, fontDir string, verbosity
 
 func cleanScaleAndDir(fontScale, fontDir string) {
 	for _, d := range []string{fontScale, fontDir} {
-		fileutils.Remove(d)
+		os.Remove(d)
 	}
 }
 
@@ -460,7 +460,7 @@ func createOrCopyFontDirFile(fontDir, fontScale string, verbosity int) bool {
 func removeFontCache(dst string) {
 	caches, _ := filepath.Glob(filepath.Join(dst, "/fonts.cache-*"))
 	for _, cache := range caches {
-		fileutils.Remove(cache)
+		os.Remove(cache)
 	}
 }
 
@@ -520,7 +520,7 @@ func makeFontScaleAndDir(d string, opts Options, force bool) error {
 			/* mkfontscale and/or mkfontdir failed or didn't exist. Remove the
 			   timestamp to make sure this script tries again next time
 			   when the problem with mkfontscale and/or mkfontdir is fixed: */
-			fileutils.Remove(timestamp)
+			os.Remove(timestamp)
 		} else {
 			/* fonts.cache-* files are now generated in /var/cache/fontconfig,
 			   remove old cache files in the individual directories

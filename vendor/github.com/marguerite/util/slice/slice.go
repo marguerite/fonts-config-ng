@@ -268,6 +268,38 @@ func Replace(slice, old, new interface{}) error {
 	return nil
 }
 
+// Flatten flatten slice of slices to one depth slice
+func Flatten(slice interface{}) (interface{}, error) {
+	sv := reflect.ValueOf(slice)
+	if sv.Kind() == reflect.Slice || sv.Kind() == reflect.Array {
+		length := 0
+		pos := 0
+		for i := 0; i < sv.Len(); i++ {
+			in := sv.Index(i)
+			if in.Kind() == reflect.Slice || in.Kind() == reflect.Array {
+				length += in.Len()
+			} else {
+				// not slice of slice, just return the original slice.
+				return slice, nil
+			}
+		}
+		s := reflect.MakeSlice(reflect.SliceOf(sv.Index(0).Index(0).Type()), length, length)
+		for i := 0; i < sv.Len(); i++ {
+			in := sv.Index(i)
+			for j := 0; j < in.Len(); j++ {
+				v := in.Index(j)
+				if s.Index(pos).CanSet() {
+					s.Index(pos).Set(v)
+				}
+				pos += 1
+			}
+		}
+		return s.Interface(), nil
+	}
+	// you can even flatten non-slice/array stuff
+	return slice, nil
+}
+
 func isSlice(v reflect.Value) (bool, error) {
 	if v.Kind() == reflect.Slice {
 		return true, nil

@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/marguerite/util/dirutils"
-	"github.com/marguerite/util/fileutils"
 	"github.com/marguerite/util/slice"
 	"github.com/openSUSE/fonts-config/lib"
 	"github.com/urfave/cli"
@@ -29,7 +28,7 @@ func removeUserSetting(prefix string) error {
 		filepath.Join(prefix, "rendering-options.conf"),
 		filepath.Join(prefix, "family-prefer.conf"),
 	} {
-		err := fileutils.Remove(f)
+		err := os.Remove(f)
 		if err != nil {
 			return err
 		}

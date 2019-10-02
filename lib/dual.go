@@ -4,7 +4,6 @@ import (
 	"github.com/marguerite/util/slice"
 	"log"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"

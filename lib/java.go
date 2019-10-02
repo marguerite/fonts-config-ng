@@ -127,9 +127,9 @@ func getInstalledFontNameAndPathFromList(lst FontCandidates, verbosity int) Java
 	fontname := ""
 
 	for _, font := range lst.FPL {
-		if out, _, _ := command.Run("/usr/bin/fc-list", []string{font, "file"}, verbosity); len(out) != 0 {
+		if out, stat, err := command.Run("/usr/bin/fc-list", font, "file"); stat == 0 && err == nil {
 			for _, f := range strings.Split(trimEndingColon(out), "\n") {
-				if fileutils.HasPrefixOrSuffix(f, []string{".ttf", ".otf", ".ttc"}) {
+				if fileutils.HasPrefixOrSuffix(f, []string{".ttf", ".otf", ".ttc"}) != 0 {
 					if info, _ := os.Stat(f); info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 {
 						fontfile = f
 						fontname = fclistArgToFontName(font)

@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
+	"strings"
 )
 
 // ErrNonExistTarget ErrNonExistTarget is used to indicate the target a symlink points to actually does not exist on the filesystem.
@@ -18,35 +20,108 @@ func (e ErrNonExistTarget) Error() string {
 	return e.Path + "points to an non-existent target " + e.Link
 }
 
+func pathSeparator() string {
+	if runtime.GOOS == "windows" {
+		return "\\"
+	}
+	return "/"
+}
+
 // ReadSymlink follows the path of the symlink recursively and finds out the target it finally points to.
 func ReadSymlink(path string) (string, error) {
 	link, err := os.Readlink(path)
 	if err != nil {
-		return path, err
+		return "", err
 	}
 	if !filepath.IsAbs(link) {
 		link = filepath.Join(filepath.Dir(path), link)
 	}
-	info, err := os.Stat(link)
+	f, err := os.Stat(link)
 	if err != nil {
-		return link, ErrNonExistTarget{path, link}
+		return "", ErrNonExistTarget{path, link}
 	}
-	if info.Mode()&os.ModeSymlink != 0 {
+	if f.Mode()&os.ModeSymlink != 0 {
 		return ReadSymlink(link)
 	}
 	return link, nil
 }
 
+// parse **/*, * and {,}
+func ParseWildcard(s string) (string, []*regexp.Regexp) {
+	r := []*regexp.Regexp{}
+	fn := func(p string) *regexp.Regexp {
+		p = strings.Replace(p, "**", "*", -1)
+		p = strings.Replace(p, "*"+pathSeparator()+"*", "*", -1)
+		p = strings.Replace(p, "*", ".*", -1)
+		p = strings.Replace(p, "\\", "\\\\", -1)
+		return regexp.MustCompile("^" + p + "$")
+	}
+
+	fn1 := func(p string) string {
+		if strings.HasSuffix(p, pathSeparator()) {
+			return p
+		}
+		return filepath.Dir(p)
+	}
+
+	// /usr/lib/xxx.{a, la}
+	re := regexp.MustCompile(`([^{]+){([^}]+)}(.*)?`)
+	m := re.FindStringSubmatch(s)
+	if len(m) != 0 {
+		for _, v := range strings.Split(m[2], ",") {
+			ns := m[1] + strings.TrimSpace(v)
+			if len(m[3]) != 0 {
+				ns += m[3]
+			}
+			r = append(r, fn(ns))
+		}
+		return fn1(m[1]), r
+	}
+	if strings.Contains(s, "*") {
+		r = append(r, fn(s))
+		return fn1(strings.Split(s, "*")[0]), r
+	}
+	return s, r
+}
+
 func ls(d string, kind string) ([]string, error) {
+	d1, _ := filepath.Abs(d)
+	dir, r := ParseWildcard(d1)
+
+	f, err := os.Stat(dir)
+	if err != nil {
+		return []string{}, err
+	}
+	if f.Mode().IsRegular() {
+		return []string{dir}, nil
+	}
+
 	files := []string{}
-	e := filepath.Walk(string(d), func(path string, info os.FileInfo, err error) error {
+	e := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			if os.IsPermission(err) {
-				fmt.Printf("WARNING: no permission to visit %s, skipped.\n", path)
+				fmt.Println("WARNING: no permission to visit " + path + ", skipped")
 				return nil
 			}
 			return err
 		}
+
+		// filter
+		ok := false
+		if len(r) != 0 {
+			for _, re := range r {
+				if re.MatchString(path) {
+					ok = true
+				}
+			}
+		} else {
+			ok = true
+		}
+
+		if !ok {
+			return nil
+		}
+
 		switch kind {
 		case "dir":
 			if info.IsDir() {
@@ -58,15 +133,12 @@ func ls(d string, kind string) ([]string, error) {
 				if err != nil {
 					if _, ok := err.(ErrNonExistTarget); ok {
 						// the symlink points to an non-existent target, ignore
-						fmt.Printf("WARNING: %s points to an non-existent target %s.\n", path, link)
+						fmt.Println("WARNING: " + path + " points to an non-existent target " + link)
 						return nil
 					}
 					return err
 				}
-				f, err := os.Stat(link)
-				if err != nil {
-					return err
-				}
+				f, _ := os.Stat(link)
 				if f.IsDir() {
 					files = append(files, path)
 				}
@@ -85,15 +157,12 @@ func ls(d string, kind string) ([]string, error) {
 				if err != nil {
 					if _, ok := err.(ErrNonExistTarget); ok {
 						// the symlink points to an non-existent target, ignore
-						fmt.Printf("WARNING: %s points to an non-existent target %s.\n", path, link)
+						fmt.Println("WARNING: " + path + " points to an non-existent target " + link)
 						return nil
 					}
 					return err
 				}
-				f, err := os.Stat(link)
-				if err != nil {
-					return err
-				}
+				f, _ := os.Stat(link)
 				if f.Mode().IsRegular() {
 					files = append(files, link)
 				}
@@ -129,29 +198,29 @@ func Ls(d string, kinds ...string) ([]string, error) {
 
 // MkdirP create directories for path
 func MkdirP(path string) error {
-	p := filepath.Dir(path)
-	fmt.Printf("Creating directory: %s\n", p)
-	if _, err := os.Stat(p); os.IsNotExist(err) {
-		err := os.MkdirAll(p, os.ModeDir)
+	fmt.Println("Creating directory: " + path)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		err := os.MkdirAll(path, os.ModeDir)
 		if err != nil {
-			fmt.Printf("Can not create directory %s\n", p)
+			fmt.Println("Can not create directory " + path)
 			return err
 		}
-		fmt.Printf("%s created\n", p)
+		fmt.Println(path + " created")
 	} else {
-		fmt.Printf("%s exists already\n", p)
+		fmt.Println(path + " exists already")
 		return nil
 	}
 	return nil
 }
 
-func parseRegexpPattern(pattern interface{}) []*regexp.Regexp {
-	re := []*regexp.Regexp{}
+func parsePattern(re []*regexp.Regexp, pattern interface{}) []*regexp.Regexp {
 	switch v := pattern.(type) {
 	case *regexp.Regexp:
 		re = append(re, v)
 	case []*regexp.Regexp:
-		re = v
+		for _, i := range v {
+			re = append(re, i)
+		}
 	case string:
 		re = append(re, regexp.MustCompile(v))
 	case []string:
@@ -159,7 +228,7 @@ func parseRegexpPattern(pattern interface{}) []*regexp.Regexp {
 			re = append(re, regexp.MustCompile(i))
 		}
 	default:
-		fmt.Println("Unsupported pattern type. Supported: *regexp.Regexp, []*regexp.Regexp, string.")
+		fmt.Println("Unsupported pattern type. Supported: *regexp.Regexp, []*regexp.Regexp, string, []string.")
 		os.Exit(1)
 	}
 	return re
@@ -167,7 +236,7 @@ func parseRegexpPattern(pattern interface{}) []*regexp.Regexp {
 
 // Glob return files in `dir` directory that matches `pattern`. can pass `ex` to exclude file from the matches. ex's expanded regex number can be zero (no exclusion), one (test against every expanded regex in pattern), or equals to the number of expanded regex in pattern(one exclude regex refers to one match regex). expanded regex number, eg: [".*\\.yaml","opencc\\/.*"] is one slice param, but the expanded regex number will be two.
 func Glob(dir string, pattern interface{}, ex ...interface{}) ([]string, error) {
-	return glob(dir, pattern, Ls, ex)
+	return glob(dir, pattern, Ls, ex...)
 }
 
 // fn: used to pass a test function or a real function that involves file operations.
@@ -177,13 +246,13 @@ func glob(dir string, pattern interface{}, fn func(string, ...string) ([]string,
 		return []string{}, err
 	}
 
-	re := parseRegexpPattern(pattern)
+	re := []*regexp.Regexp{}
+	re = parsePattern(re, pattern)
 	re1 := []*regexp.Regexp{}
 	if len(ex) > 0 {
+		// ex's type is []interface{}, need to assert to actual type first
 		for _, v := range ex {
-			for _, r := range parseRegexpPattern(v) {
-				re1 = append(re1, r)
-			}
+			re1 = parsePattern(re1, v)
 		}
 	}
 

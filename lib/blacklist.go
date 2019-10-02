@@ -2,12 +2,9 @@ package lib
 
 import (
 	"fmt"
-	"github.com/marguerite/util/dirutils"
-	"github.com/marguerite/util/fileutils"
 	"github.com/marguerite/util/slice"
 	"log"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -63,7 +60,8 @@ func getEmojiFontFilesByName(emojis string) []string {
 
 // GenerateEmojiBlacklist generate 81-emoji-blacklist-glyphs.conf
 func GenerateEmojiBlacklist(userMode bool, opts Options) {
-	nonEmojiFonts := ReadFontFilesFromDir("/usr/share/fonts/truetype", false)
+	nonEmojiFonts := ReadFontFiles()
+	slice.Remove(&nonEmojiFonts, ReadFontFiles("Emoji"))
 	emojiFonts := getEmojiFontFilesByName(opts.SystemEmojis)
 	emojiCharset := BuildEmojiCharset(emojiFonts)
 	blacklist := EnhancedFonts{}

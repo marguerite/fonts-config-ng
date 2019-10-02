@@ -2,11 +2,14 @@ package lib
 
 import (
 	"bytes"
+	"github.com/marguerite/util/dirutils"
 	"github.com/marguerite/util/fileutils"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
+	"regexp"
 	"strings"
 )
 
@@ -90,7 +93,7 @@ func NewReader(f string) *bytes.Buffer {
 // persist Overwrite file with new content or completely remove the file.
 func persist(file string, text []byte, perm os.FileMode) error {
 	if len(text) == 0 {
-		err := fileutils.Remove(file)
+		err := os.Remove(file)
 		return err
 	}
 	err := ioutil.WriteFile(file, text, perm)
@@ -107,7 +110,7 @@ func ReadFontFiles(restricts ...interface{}) []string {
 
 	candidates := []string{}
 
-	local := filepath.Join(lib.GetEnv("HOME"), ".fonts")
+	local := filepath.Join(GetEnv("HOME"), ".fonts")
 	for _, dir := range []string{local, "/usr/share/fonts"} {
 		fonts, _ := dirutils.Ls(dir)
 		for _, font := range fonts {
