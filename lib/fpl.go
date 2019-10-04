@@ -66,8 +66,8 @@ func buildFPL(genericName, preferredFamiliesInString string, userMode bool, opts
 
 // GenFamilyPreferenceLists generates fontconfig fpl conf with user's explicit choices
 func GenFamilyPreferenceLists(userMode bool, opts Options) {
-	fplFile := GenConfigLocation("fpl", userMode)
-	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Generating %s\n", fplFile))
+	fplFile := GetConfigLocation("fpl", userMode)
+	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Generating %s", fplFile))
 
 	fplText := genConfigPreamble(userMode, "")
 
@@ -87,7 +87,7 @@ func GenFamilyPreferenceLists(userMode bool, opts Options) {
 	fplText += buildFPL("monospace", opts.PreferMonoFamilies, userMode, opts)
 	fplText += "</fontconfig>\n"
 
-	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.\n", fplFile))
+	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.", fplFile))
 
 	err := persist(fplFile, []byte(fplText), 0644)
 	if err != nil {

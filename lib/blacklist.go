@@ -4,69 +4,53 @@ import (
 	"fmt"
 	"github.com/marguerite/util/slice"
 	"log"
-	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 )
 
-func generateBlacklistConfig(f Collection) string {
-	conf := "\t<match target=\"scan\">\n\t\t<test name=\"family\">\n\t\t\t<string>" + f.Name[0] + "</string>\n\t\t</test>\n"
-	if !(f.Width == 0 && f.Weight == 0 && f.Slant == 0) {
-		if f.Width != 100 {
-			conf += "\t\t<test name=\"width\">\n\t\t\t<int>" + strconv.Itoa(f.Width) + "</int>\n\t\t</test>\n"
-		}
-		if f.Weight != 80 {
-			conf += "\t\t<test name=\"weight\">\n\t\t\t<int>" + strconv.Itoa(f.Weight) + "</int>\n\t\t</test>\n"
-		}
-		if f.Slant != 0 {
-			conf += "\t\t<test name=\"slant\">\n\t\t\t<int>" + strconv.Itoa(f.Slant) + "</int>\n\t\t</test>\n"
-		}
+func getEmojiFontsByName(fonts Collection, emoji string) Collection {
+	c := Collection{}
+	// Prepare restricts
+	for _, v := range strings.Split(emoji, ":") {
+		tmp := fonts.FindByName(v)
+		slice.Concat(&c, tmp)
 	}
-	conf += "\t\t<edit name=\"charset\" mode=\"assign\">\n\t\t\t<minus>\n\t\t\t\t<name>charset</name>\n"
-	conf += CharsetToFontConfig(f.Charset)
-	conf += "\t\t\t</minus>\n\t\t</edit>\n\t</match>\n\n"
-	return conf
+	return c
 }
 
-func appendBlacklist(b Collection, f Font) Collection {
-	if i, ok := b.Contains(f); ok {
-		b[i].AppendCharset(f.Charset)
-	} else {
-		b = append(b, f)
+//genEmojiCharset generate charset array of a emoji font
+func genEmojiCharset(fonts Collection) Charset {
+	charset := Charset{}
+
+	for _, font := range fonts {
+		slice.Concat(&charset, font.Charset)
 	}
-	return b
+
+	slice.Unique(&charset)
+
+	/* common emojis that almost every font has
+	   "#","*","0","1","2","3","4","5","6","7","8","9","©","®","™"," ",
+	   "‼","↔","↕","↖","↗","↘","↙","▪","▫","☀","⁉","ℹ",
+	   "▶","◀","☑","↩","↪","➡","⬅","⬆","⬇","♀","♂" */
+	emojis := Charset{"0", "20", "23", "2a", "30", "31", "32", "33", "34", "35", "36", "37",
+		"38", "39", "a9", "ae", "200d", "203c", "2049", "20e3", "2122",
+		"2139", "2194", "2195", "2196", "2197", "2198", "2199", "21a9",
+		"21aa", "25aa", "25ab", "25b6", "25c0", "2600", "2611", "2640",
+		"2642", "27a1", "2b05", "2b06", "2b07"}
+	slice.Remove(&charset, emojis)
+	return charset
 }
 
-func getEmojiFontFilesByName(emojis string) []string {
-	emojiFonts := ReadFontFiles("Emoji")
-	matched := []string{}
-	m := make(map[string]string)
-	for _, v := range emojiFonts {
-		out, _ := exec.Command("/usr/bin/fc-scan", "--format", "%{family}", v).Output()
-		m[string(out)] = v
-	}
-	for i, v := range strings.Split(emojis, ":") {
-		if _, ok := m[v]; ok {
-			matched = append(matched, m[v])
-		} else {
-			if i == len(emojis)-1 {
-				fmt.Printf("%s not found in installed emoji fonts, maybe not installed at all?", v)
-			}
-		}
-	}
-	return matched
-}
-
-// GenerateEmojiBlacklist generate 81-emoji-blacklist-glyphs.conf
-func GenerateEmojiBlacklist(userMode bool, opts Options) {
-	nonEmojiFonts := ReadFontFiles()
-	slice.Remove(&nonEmojiFonts, ReadFontFiles("Emoji"))
-	emojiFonts := getEmojiFontFilesByName(opts.SystemEmojis)
-	emojiCharset := BuildEmojiCharset(emojiFonts)
+// GenEmojiBlacklist generate 81-emoji-blacklist-glyphs.conf
+func GenEmojiBlacklist(fonts Collection, userMode bool, opts Options) {
+	allEmojiFonts := fonts.FindByName("Emoji")
+	nonEmojiFonts := fonts
+	slice.Remove(&nonEmojiFonts, allEmojiFonts)
+	emojiFonts := getEmojiFontsByName(allEmojiFonts, opts.SystemEmojis)
+	emojiCharset := genEmojiCharset(emojiFonts)
 	blacklist := Collection{}
 
-	debug(opts.Verbosity, VerbosityDebug, "Blacklisting glyphs from system emoji fonts in non-emoji fonts.\n")
+	debug(opts.Verbosity, VerbosityDebug, "Blacklisting glyphs from chosen emoji fonts in non-emoji fonts.")
 
 	if len(emojiCharset) == 0 {
 		return
@@ -78,40 +62,44 @@ func GenerateEmojiBlacklist(userMode bool, opts Options) {
 	ch := make(chan struct{}, 100) // ch is a chan to avoid "too many open files" when os exec
 
 	for _, font := range nonEmojiFonts {
-		go func(fontFile string, verbosity int) {
+		go func(f Font, verbosity int) {
 			defer wg.Done()
 			defer func() { <-ch }() // release chan
 			ch <- struct{}{}        // acquire chan
-			charset := BuildCharset(fontFile)
-			in := IntersectCharset(charset, emojiCharset)
-			debug(verbosity, VerbosityDebug, fmt.Sprintf("Calculating glyphs for %s\nIntersected charsets: %v\n", fontFile, in))
+			in := f.Charset.Intersect(emojiCharset)
 
 			if len(in) > 0 {
-				names := GetFontName(fontFile)
+				debug(verbosity, VerbosityDebug, fmt.Sprintf("Calculating glyphs for %s\nIntersected charsets: %v", f.Name[0], in))
+				names := f.Name
 				if len(names) > 1 {
-					s := Style{}
-					s.Load(fontFile)
-					unstyled := GetUnstyledFontName(Font{names, []string{}, false})
+					unstyled := f.UnstyledName()
 
-					for _, f := range unstyled {
-						c := EnhancedFont{Font{[]string{f}, []string{}, false}, in, s}
+					for _, u := range unstyled {
+						newF := f
+						newF.SetName([]string{u})
+						newF.SetCharset(in)
 						mux.Lock()
-						blacklist = appendBlacklist(blacklist, c)
+						blacklist.AppendCharsetOrFont(newF)
 						mux.Unlock()
 					}
 
 					slice.Remove(&names, unstyled)
 
-					for _, f := range names {
-						c := EnhancedFont{Font{[]string{f}, []string{}, false}, in, Style{}}
+					for _, name := range names {
+						newF := f
+						newF.SetName([]string{name})
+						newF.SetStyle(100, 80, 0)
+						newF.SetCharset(in)
 						mux.Lock()
-						blacklist = appendBlacklist(blacklist, c)
+						blacklist.AppendCharsetOrFont(newF)
 						mux.Unlock()
 					}
 				} else {
-					c := EnhancedFont{Font{[]string{names[0]}, []string{}, false}, in, Style{}}
+					newF := f
+					newF.SetCharset(in)
+					newF.SetStyle(100, 80, 0)
 					mux.Lock()
-					blacklist = appendBlacklist(blacklist, c)
+					blacklist.AppendCharsetOrFont(newF)
 					mux.Unlock()
 				}
 			}
@@ -124,16 +112,16 @@ func GenerateEmojiBlacklist(userMode bool, opts Options) {
 	emojiConf := ""
 
 	for _, f := range blacklist {
-		conf += generateBlacklistConfig(f)
+		conf += genBlacklistConfig(f)
 	}
 
 	if len(conf) > 0 {
 		emojiConf = genConfigPreamble(userMode, "") + conf + "</fontconfig>\n"
 	}
 
-	blacklistFile := GenConfigLocation("blacklist", userMode)
+	blacklistFile := GetConfigLocation("blacklist", userMode)
 
-	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Blacklist file location: %s\n", blacklistFile))
+	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Blacklist file location: %s", blacklistFile))
 
 	err := persist(blacklistFile, []byte(emojiConf), 0644)
 

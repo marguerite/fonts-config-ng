@@ -1,14 +1,14 @@
-# github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
+# github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 github.com/golang/freetype
 github.com/golang/freetype/raster
 github.com/golang/freetype/truetype
-# github.com/marguerite/util v0.0.0-20191001074114-9f3c91de7102
+# github.com/marguerite/util v0.0.0-20191004044616-3cd4738d6c98
 github.com/marguerite/util/dirutils
-github.com/marguerite/util/fileutils
 github.com/marguerite/util/slice
 github.com/marguerite/util/command
+github.com/marguerite/util/fileutils
 # github.com/russross/blackfriday/v2 v2.0.1
 github.com/russross/blackfriday/v2
 # github.com/shurcooL/sanitized_anchor_name v1.0.0

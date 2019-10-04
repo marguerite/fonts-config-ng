@@ -41,9 +41,9 @@ func genBitmapLanguagesConfig(opts Options) string {
 func GenRenderingOptions(userMode bool, opts Options) {
 	/* # reflect fonts-config syconfig variables or
 	   # parameters in fontconfig setting to control rendering */
-	renderFile := GenConfigLocation("render", userMode)
+	renderFile := GetConfigLocation("render", userMode)
 
-	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Generating %s.\n", renderFile))
+	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Generating %s.", renderFile))
 	renderText := genRenderingOptions(opts, userMode)
 
 	err := persist(renderFile, []byte(renderText), 0644)
@@ -95,7 +95,7 @@ func validStringOption(opt string) bool {
 // genConfigPreamble generate fontconfig preamble
 func genConfigPreamble(userMode bool, comment string) string {
 	config := "<?xml version=\"1.0\"?>\n<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n\n<!-- DO NOT EDIT; this is a generated file -->\n<!-- modify "
-	config += GenConfigLocation("fc", false)
+	config += GetConfigLocation("fc", false)
 	config += " && run /usr/bin/fonts-config "
 	if userMode {
 		config += "-\\-user "
@@ -110,7 +110,7 @@ func genStringOptionConfig(verbosity int, opt, dbgOutput, comment, editName stri
 	if !validStringOption(opt) {
 		return ""
 	}
-	debug(verbosity, VerbosityDebug, fmt.Sprintf(dbgOutput+" %s\n", opt))
+	debug(verbosity, VerbosityDebug, fmt.Sprintf(dbgOutput+" %s", opt))
 	config := comment
 	config += "\t<match target=\"pattern\" >\n\t\t<edit name=\""
 	config += editName
@@ -140,7 +140,7 @@ func genBoolOptionConfig(verbosity int, opt bool, dbgOutput, comment, editName s
 	if strings.HasPrefix(editName, "force") && !opt {
 		return ""
 	}
-	debug(verbosity, VerbosityDebug, fmt.Sprintf(dbgOutput+" %t\n", opt))
+	debug(verbosity, VerbosityDebug, fmt.Sprintf(dbgOutput+" %t", opt))
 	config := comment
 	config += "\t<match target=\"pattern\">\n\t\t<edit name=\""
 	config += editName

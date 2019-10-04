@@ -7,6 +7,7 @@ import (
 	"github.com/marguerite/util/slice"
 	"github.com/openSUSE/fonts-config/lib"
 	"github.com/urfave/cli"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -108,18 +109,18 @@ func getUserPrefix(userMode bool, verbosity int) string {
 }
 
 func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
-	sys := lib.NewReader(lib.GenConfigLocation("fc", false))
+	sys := lib.NewReader(lib.GetConfigLocation("fc", false))
 	config := lib.LoadOptions(sys, lib.NewOptions())
-	log.Printf("System Configuration: %s\n", config.Bounce())
+	log.Printf("System Configuration: %s", config.Bounce())
 
 	if userMode {
-		user := lib.NewReader(lib.GenConfigLocation("fc", true))
+		user := lib.NewReader(lib.GetConfigLocation("fc", true))
 		config = lib.LoadOptions(user, config)
-		log.Printf("With user configuration prepended: %s\n", config.Bounce())
+		log.Printf("With user configuration prepended: %s", config.Bounce())
 	}
 
 	config.Merge(opt, cliFlagsRltPos(c))
-	log.Printf("With command line configuration prepended: %s\n", config.Bounce())
+	log.Printf("With command line configuration prepended: %s", config.Bounce())
 
 	writeOptions(config, userMode)
 
@@ -127,12 +128,12 @@ func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
 }
 
 func writeOptions(opt lib.Options, userMode bool) {
-	tmpl := lib.NewReader(lib.GenConfigLocation("fc", userMode))
+	tmpl := lib.NewReader(lib.GetConfigLocation("fc", userMode))
 	config := opt.FillTemplate(tmpl)
 
-	f, err := os.OpenFile(lib.GenConfigLocation("fc", userMode), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	f, err := os.OpenFile(lib.GetConfigLocation("fc", userMode), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 	if err != nil {
-		log.Fatalf("Can not open %s to write: %s.\n", lib.GenConfigLocation("fc", userMode), err.Error())
+		log.Fatalf("Can not open %s to write: %s.\n", lib.GetConfigLocation("fc", userMode), err.Error())
 	}
 	defer f.Close()
 
@@ -301,7 +302,7 @@ func main() {
 			emojis, preferredSans, preferredSerif,
 			preferredMono, metric, forceFPL, ttcap, enableJava}
 
-		log.Printf("Command line options: %s\n", options.Bounce())
+		log.Printf("Command line options: %s", options.Bounce())
 
 		config := loadOptions(options, c, userMode)
 
@@ -314,7 +315,7 @@ func main() {
 
 			text := "Sysconfig options (read from /etc/sysconfig/fonts-config"
 			if userMode {
-				text += fmt.Sprintf(", %s)\n", lib.GenConfigLocation("fc", userMode))
+				text += fmt.Sprintf(", %s)\n", lib.GetConfigLocation("fc", userMode))
 			} else {
 				text += ")\n"
 			}
@@ -333,10 +334,20 @@ func main() {
 			# changed in /etc/fonts after calling fc-cache, fontconfig
 			# will think that the cache files are out of date again. */
 
+		collection := lib.Collection{}
+		cache := lib.GetCacheLocation(userMode)
+		if _, err := os.Stat(cache); !os.IsNotExist(err) {
+			collection.Decode(lib.NewReader(cache).Bytes())
+		}
+		collection = lib.LoadFonts(collection)
+
 		lib.GenRenderingOptions(userMode, config)
 		lib.GenFamilyPreferenceLists(userMode, config)
-		lib.GenerateEmojiBlacklist(userMode, config)
-		lib.FixDualSpacing(userMode)
+		lib.GenEmojiBlacklist(collection, userMode, config)
+		lib.FixDualSpacing(collection, userMode)
+
+		b, _ := collection.Encode()
+		ioutil.WriteFile(cache, b, 0644)
 
 		if !userMode {
 			lib.FcCache(config.Verbosity)

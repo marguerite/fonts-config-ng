@@ -2,14 +2,10 @@ package lib
 
 import (
 	"bytes"
-	"github.com/marguerite/util/dirutils"
-	"github.com/marguerite/util/fileutils"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"reflect"
-	"regexp"
 	"strings"
 )
 
@@ -47,14 +43,22 @@ func ErrChk(e error) {
 	}
 }
 
+//GetCacheLocation return fonts-config cache location
+func GetCacheLocation(userMode bool) string {
+	if userMode {
+		return filepath.Join(GetEnv("HOME"), ".config/fontconfig/fonts-config.json")
+	}
+	return "/var/tmp/fonts-config.json"
+}
+
 // Location system locations
 type Location struct {
 	System string
 	User   string
 }
 
-// GenConfigLocation return config file locations
-func GenConfigLocation(c string, userMode bool) string {
+// GetConfigLocation return config file locations
+func GetConfigLocation(c string, userMode bool) string {
 	m := map[string]Location{
 		"fc":        {"fonts-config", "fonts-config"},
 		"render":    {"10-rendering-options.conf", "rendering-options.conf"},
@@ -98,47 +102,4 @@ func persist(file string, text []byte, perm os.FileMode) error {
 	}
 	err := ioutil.WriteFile(file, text, perm)
 	return err
-}
-
-//ReadFontFiles Reads global and local fonts by default, can add restricts in format of string or *regexp.Regexp,
-//will return the matched ones only.
-func ReadFontFiles(restricts ...interface{}) []string {
-	_, ok := restricts[0].(*regexp.Regexp)
-	if reflect.ValueOf(restricts[0]).Kind() != reflect.String && !ok {
-		log.Fatal("Restricts must be string or *regexp.Regexp")
-	}
-
-	candidates := []string{}
-
-	local := filepath.Join(GetEnv("HOME"), ".fonts")
-	for _, dir := range []string{local, "/usr/share/fonts"} {
-		fonts, _ := dirutils.Ls(dir)
-		for _, font := range fonts {
-			base := filepath.Base(font)
-			if fileutils.HasPrefixOrSuffix(base, []string{"font", ".", ".dir"}) != 0 {
-				continue
-			}
-			in := true
-			if len(restricts) > 0 {
-				for _, restrict := range restricts {
-					if ok {
-						re, _ := restrict.(*regexp.Regexp)
-						if !re.MatchString(base) {
-							in = false
-						}
-					} else {
-						str, _ := restrict.(string)
-						if !strings.Contains(base, str) {
-							in = false
-						}
-					}
-				}
-			}
-			if in {
-				candidates = append(candidates, font)
-			}
-		}
-	}
-
-	return candidates
 }

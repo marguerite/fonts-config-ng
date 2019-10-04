@@ -1,6 +1,7 @@
 package slice
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 )
@@ -23,7 +24,7 @@ func Contains(src interface{}, element interface{}) (bool, error) {
 		ev = reflect.ValueOf(element)
 	}
 
-	if ok, err := isSlice(sv); !ok {
+	if err := isSlice(sv); err != nil {
 		return false, err
 	}
 
@@ -51,7 +52,7 @@ func shortest(src interface{}) (interface{}, error) {
 	sv := reflect.ValueOf(src)
 	var shortest interface{}
 
-	if ok, err := isSlice(sv); !ok {
+	if err := isSlice(sv); err != nil {
 		return shortest, err
 	}
 
@@ -104,11 +105,11 @@ func Remove(src interface{}, element interface{}) error {
 		return fmt.Errorf("%v is not a pointer type", src)
 	}
 
-	if ok, err := isSlice(sv); !ok {
+	if err := isSlice(sv); err != nil {
 		return err
 	}
 
-	if ok, _ := isSlice(ev); ok {
+	if err := isSlice(ev); err == nil {
 		for i := 0; i < ev.Len(); i++ {
 			e := Remove(src, ev.Index(i))
 			if e != nil {
@@ -123,7 +124,7 @@ func Remove(src interface{}, element interface{}) error {
 					idx = append(idx, i)
 				}
 			}
-			tmp := removeElementsFromSlice(idx, sv)
+			tmp := removeFromSlice(idx, sv)
 			sv.Set(tmp)
 			return nil
 		}
@@ -141,7 +142,7 @@ func Unique(src interface{}) error {
 		return fmt.Errorf("%v is not a pointer type", src)
 	}
 
-	if ok, err := isSlice(sv); !ok {
+	if err := isSlice(sv); err != nil {
 		return err
 	}
 
@@ -149,14 +150,15 @@ func Unique(src interface{}) error {
 	idx := []int{}
 
 	for i := 0; i < sv.Len(); i++ {
-		if _, ok := m[sv.Index(i).Interface()]; ok {
+		k := genKey(sv.Index(i))
+		if _, ok := m[k]; ok {
 			idx = append(idx, i)
 		} else {
-			m[sv.Index(i).Interface()] = struct{}{}
+			m[k] = struct{}{}
 		}
 	}
 
-	tmp := removeElementsFromSlice(idx, sv)
+	tmp := removeFromSlice(idx, sv)
 	sv.Set(tmp)
 
 	return nil
@@ -174,7 +176,7 @@ func Intersect(src interface{}, dst interface{}) error {
 	}
 
 	for _, v := range []reflect.Value{sv, dv} {
-		if ok, err := isSlice(v); !ok {
+		if err := isSlice(v); err != nil {
 			return err
 		}
 	}
@@ -183,16 +185,16 @@ func Intersect(src interface{}, dst interface{}) error {
 	idx := []int{}
 
 	for i := 0; i < dv.Len(); i++ {
-		m[dv.Index(i).Interface()] = struct{}{}
+		m[genKey(dv.Index(i))] = struct{}{}
 	}
 
 	for j := 0; j < sv.Len(); j++ {
-		if _, ok := m[sv.Index(j).Interface()]; !ok {
+		if _, ok := m[genKey(sv.Index(j))]; !ok {
 			idx = append(idx, j)
 		}
 	}
 
-	tmp := removeElementsFromSlice(idx, sv)
+	tmp := removeFromSlice(idx, sv)
 	sv.Set(tmp)
 
 	return nil
@@ -209,25 +211,25 @@ func Concat(src interface{}, dst interface{}) error {
 		return fmt.Errorf("%v is not a pointer type", src)
 	}
 
-	if ok, err := isSlice(sv); !ok {
+	if err := isSlice(sv); err != nil {
 		return err
 	}
 
 	m := make(map[interface{}]struct{})
 
 	for i := 0; i < sv.Len(); i++ {
-		m[sv.Index(i).Interface()] = struct{}{}
+		m[genKey(sv.Index(i))] = struct{}{}
 	}
 
 	if dv.Kind() == reflect.Slice {
 		for j := 0; j < dv.Len(); j++ {
-			if _, ok := m[dv.Index(j).Interface()]; !ok {
+			if _, ok := m[genKey(dv.Index(j))]; !ok {
 				sv.Set(reflect.Append(sv, dv.Index(j)))
 			}
 		}
 	} else {
 		if sv.Type().Elem().Kind() == dv.Kind() {
-			if _, ok := m[dv.Interface()]; !ok {
+			if _, ok := m[genKey(dv)]; !ok {
 				sv.Set(reflect.Append(sv, dv))
 			}
 			return nil
@@ -300,14 +302,27 @@ func Flatten(slice interface{}) (interface{}, error) {
 	return slice, nil
 }
 
-func isSlice(v reflect.Value) (bool, error) {
-	if v.Kind() == reflect.Slice {
-		return true, nil
+//genKey generate map key
+// currently support all fully comparable type and struct
+func genKey(v reflect.Value) interface{} {
+	k := v.Interface()
+
+	if v.Kind() == reflect.Struct {
+		b, _ := json.Marshal(k)
+		k = reflect.ValueOf(string(b)).Interface()
 	}
-	return false, fmt.Errorf("%v is not a valid slice", v)
+
+	return k
 }
 
-func removeElementsFromSlice(idx []int, v reflect.Value) reflect.Value {
+func isSlice(v reflect.Value) error {
+	if v.Kind() == reflect.Slice {
+		return nil
+	}
+	return fmt.Errorf("%v is not a valid slice", v)
+}
+
+func removeFromSlice(idx []int, v reflect.Value) reflect.Value {
 	tmp := reflect.MakeSlice(v.Type(), v.Len()-len(idx), v.Cap()-len(idx))
 	n := 0
 	for i := 0; i < v.Len(); i++ {
