@@ -46,7 +46,7 @@ func GenRenderingOptions(userMode bool, opts Options) {
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Generating %s.", renderFile))
 	renderText := genRenderingOptions(opts, userMode)
 
-	err := persist(renderFile, []byte(renderText), 0644)
+	err := overwriteOrRemoveFile(renderFile, []byte(renderText), 0644)
 	if err != nil {
 		log.Fatalf("Can not write %s: %s\n", renderFile, err.Error())
 	}
@@ -90,20 +90,6 @@ func validStringOption(opt string) bool {
 		return false
 	}
 	return true
-}
-
-// genConfigPreamble generate fontconfig preamble
-func genConfigPreamble(userMode bool, comment string) string {
-	config := "<?xml version=\"1.0\"?>\n<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n\n<!-- DO NOT EDIT; this is a generated file -->\n<!-- modify "
-	config += GetConfigLocation("fc", false)
-	config += " && run /usr/bin/fonts-config "
-	if userMode {
-		config += "-\\-user "
-	}
-	config += "instead. -->\n"
-	config += comment
-	config += "\n<fontconfig>\n"
-	return config
 }
 
 func genStringOptionConfig(verbosity int, opt, dbgOutput, comment, editName string, cst, force bool) string {

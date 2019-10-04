@@ -123,7 +123,7 @@ func GenEmojiBlacklist(fonts Collection, userMode bool, opts Options) {
 
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Blacklist file location: %s", blacklistFile))
 
-	err := persist(blacklistFile, []byte(emojiConf), 0644)
+	err := overwriteOrRemoveFile(blacklistFile, []byte(emojiConf), 0644)
 
 	if err != nil {
 		log.Fatalf("Can not write %s: %s\n", blacklistFile, err.Error())

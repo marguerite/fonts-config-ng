@@ -51,20 +51,24 @@ func GetCacheLocation(userMode bool) string {
 	return "/var/tmp/fonts-config.json"
 }
 
-// Location system locations
-type Location struct {
+// location system locations
+type location struct {
 	System string
 	User   string
 }
 
 // GetConfigLocation return config file locations
 func GetConfigLocation(c string, userMode bool) string {
-	m := map[string]Location{
-		"fc":        {"fonts-config", "fonts-config"},
-		"render":    {"10-rendering-options.conf", "rendering-options.conf"},
-		"fpl":       {"58-family-prefer-local.conf", "family-prefer.conf"},
-		"dual":      {"20-fix-globaladvance.conf", "fix-globaladvance.conf"},
-		"blacklist": {"81-emoji-blacklist-glyphs.conf", "emoji-blacklist-glyphs.conf"},
+	m := map[string]location{
+		"fc":          {"fonts-config", "fonts-config"},
+		"render":      {"10-rendering-options.conf", "rendering-options.conf"},
+		"fpl":         {"58-family-prefer-local.conf", "family-prefer.conf"},
+		"dual":        {"20-fix-globaladvance.conf", "fix-globaladvance.conf"},
+		"blacklist":   {"81-emoji-blacklist-glyphs.conf", "emoji-blacklist-glyphs.conf"},
+		"tt":          {"10-group-tt-hinted-fonts.conf", "tt-hinted-fonts.conf"},
+		"nonTT":       {"10-group-tt-non-hinted-fonts.conf", "tt-non-hinted-fonts.conf"},
+		"notoDefault": {"49-family-default-noto.conf", "family-default-noto.conf"},
+		"notoPrefer":  {"59-family-prefer-lang-specific-noto.conf", "family-prefer-lang-specific-noto.conf"},
 	}
 
 	if userMode {
@@ -94,8 +98,8 @@ func NewReader(f string) *bytes.Buffer {
 	return bytes.NewBuffer(buf)
 }
 
-// persist Overwrite file with new content or completely remove the file.
-func persist(file string, text []byte, perm os.FileMode) error {
+//overwriteOrRemoveFile Overwrite file with new content or completely remove the file.
+func overwriteOrRemoveFile(file string, text []byte, perm os.FileMode) error {
 	if len(text) == 0 {
 		err := os.Remove(file)
 		return err

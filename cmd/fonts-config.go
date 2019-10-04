@@ -341,9 +341,11 @@ func main() {
 		}
 		collection = lib.LoadFonts(collection)
 
+		lib.GenTTType(collection, userMode)
 		lib.GenRenderingOptions(userMode, config)
 		lib.GenFamilyPreferenceLists(userMode, config)
 		lib.GenEmojiBlacklist(collection, userMode, config)
+		lib.GenNotoConfig(collection, userMode)
 		lib.FixDualSpacing(collection, userMode)
 
 		b, _ := collection.Encode()

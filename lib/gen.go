@@ -5,64 +5,34 @@ import (
 	"strings"
 )
 
-// GenericFamily find generic name through font name
-func GenericFamily(fontName string) string {
-	if strings.Contains(fontName, " Symbols") {
-		return "symbol"
+// genConfigPreamble generate fontconfig preamble
+func genConfigPreamble(userMode bool, comment string) string {
+	config := "<?xml version=\"1.0\"?>\n<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n\n<!-- DO NOT EDIT; this is a generated file -->\n<!-- modify "
+	config += GetConfigLocation("fc", false)
+	config += " && run /usr/bin/fonts-config "
+	if userMode {
+		config += "-\\-user "
 	}
-	if strings.Contains(fontName, " Mono") || strings.Contains(fontName, " HW") {
-		return "monospace"
-	}
-	if strings.HasSuffix(fontName, "Emoji") {
-		return "emoji"
-	}
-	if strings.Contains(fontName, " Serif") {
-		return "serif"
-	}
-	return "sans-serif"
+	config += "instead. -->\n"
+	config += comment
+	config += "\n<fontconfig>\n"
+	return config
 }
 
-// GenerateDefaultFamily return a default family fontconfig block
-func GenerateDefaultFamily(fontName string) string {
-	return "\t<alias>\n\t\t<family>" + fontName + "</family>\n\t\t<default>\n\t\t\t<family>" +
-		GenericFamily(fontName) + "</family>\n\t\t</default>\n\t</alias>\n\n"
-}
-
-func generateFontTypeByHinting(fontName string, hinting bool) string {
-	txt := "\t<match target=\"font\">\n\t\t<test name=\"family\">\n\t\t\t<string>" + fontName + "</string>\n\t\t</test>\n"
-	txt += "\t\t<edit name=\"font_type\" mode=\"assign\">\n\t\t\t<string>"
-	if hinting {
-		txt += "TT Instructed Font"
-	} else {
-		txt += "NON TT Instructed Font"
-	}
-	txt += "</string>\n\t\t</edit>\n\t</match>\n\n"
-	return txt
-}
-
-// GenerateFontTypeByHinting generate font_type block based on hinting
-func GenerateFontTypeByHinting(f Font) string {
-	if len(f.Name) > 1 {
-		txt := ""
-		for _, v := range f.Name {
-			txt += generateFontTypeByHinting(v, f.Hinting)
+//genFontTypeByHinting generate fontconfig font_type block based on tt hinting.
+func genFontTypeByHinting(font Font) string {
+	str := ""
+	for _, name := range font.Name {
+		str += "\t<match target=\"font\">\n\t\t<test name=\"family\">\n\t\t\t<string>" + name + "</string>\n\t\t</test>\n"
+		str += "\t\t<edit name=\"font_type\" mode=\"assign\">\n\t\t\t<string>"
+		if font.Hinting {
+			str += "TT Instructed Font"
+		} else {
+			str += "NON TT Instructed Font"
 		}
-		return txt
+		str += "</string>\n\t\t</edit>\n\t</match>\n\n"
 	}
-	return generateFontTypeByHinting(f.Name[0], f.Hinting)
-}
-
-// GenerateFamilyPreferListForLang generate family preference list of fonts for a generic font name
-// and a specific language
-func GenerateFamilyPreferListForLang(generic, lang string, fonts []string) string {
-	txt := "\t<match>\n\t\t<test name=\"family\">\n\t\t\t<string>" + generic + "</string>\n\t\t</test>\n"
-	txt += "\t\t<test name=\"lang\">\n\t\t\t<string>" + lang + "</string>\n\t\t</test>\n"
-	txt += "\t\t<edit name=\"family\" mode=\"prepend\">\n"
-	for _, f := range fonts {
-		txt += "\t\t\t<string>" + f + "</string>\n"
-	}
-	txt += "\t\t</edit>\n\t</match>\n\n"
-	return txt
+	return str
 }
 
 func genBlacklistConfig(f Font) string {

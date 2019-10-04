@@ -28,7 +28,7 @@ func fixDualSpacing(fonts Collection, userMode bool) string {
 func FixDualSpacing(fonts Collection, userMode bool) {
 	text := fixDualSpacing(fonts, userMode)
 	dualConfig := GetConfigLocation("dual", userMode)
-	err := persist(dualConfig, []byte(text), 0644)
+	err := overwriteOrRemoveFile(dualConfig, []byte(text), 0644)
 	if err != nil {
 		log.Fatalf("Can not write %s: %s\n", dualConfig, err.Error())
 	}

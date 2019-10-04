@@ -39,7 +39,7 @@ func GenMetricCompatibility(verbosity int) {
 
 	debug(verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.\n", file))
 
-	err := persist(file, []byte(text), 0644)
+	err := overwriteOrRemoveFile(file, []byte(text), 0644)
 	if err != nil {
 		log.Fatalf("Can not write %s: %s\n", file, err.Error())
 	}
