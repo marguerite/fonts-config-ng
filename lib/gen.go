@@ -20,18 +20,15 @@ func genConfigPreamble(userMode bool, comment string) string {
 }
 
 //genFontTypeByHinting generate fontconfig font_type block based on tt hinting.
-func genFontTypeByHinting(font Font) string {
-	str := ""
-	for _, name := range font.Name {
-		str += "\t<match target=\"font\">\n\t\t<test name=\"family\">\n\t\t\t<string>" + name + "</string>\n\t\t</test>\n"
-		str += "\t\t<edit name=\"font_type\" mode=\"assign\">\n\t\t\t<string>"
-		if font.Hinting {
-			str += "TT Instructed Font"
-		} else {
-			str += "NON TT Instructed Font"
-		}
-		str += "</string>\n\t\t</edit>\n\t</match>\n\n"
+func genFontTypeByHinting(name string, hinting bool) string {
+	str := "\t<match target=\"font\">\n\t\t<test name=\"family\">\n\t\t\t<string>" + name + "</string>\n\t\t</test>\n"
+	str += "\t\t<edit name=\"font_type\" mode=\"assign\">\n\t\t\t<string>"
+	if hinting {
+		str += "TT Instructed Font"
+	} else {
+		str += "NON TT Instructed Font"
 	}
+	str += "</string>\n\t\t</edit>\n\t</match>\n\n"
 	return str
 }
 

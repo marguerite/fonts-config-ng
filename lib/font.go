@@ -29,7 +29,7 @@ func NewCollection(file string) Collection {
 	}
 
 	c := Collection{}
-	hint, _ := Hinting(file)
+	hint, _ := isHinted(file)
 	charset := NewCharset(file)
 
 	re := regexp.MustCompile(`(?ms)Pattern has(.*?)^\n`)
@@ -39,6 +39,14 @@ func NewCollection(file string) Collection {
 		name := parseFontNames(m[1])
 		lang := parseFontLangs(m[1])
 		cjk := parseCJKSupport(lang)
+
+		// cjk fonts usually claims all the langs, make clean
+		if cjk[0] != "none" {
+			tmp := lang
+			slice.Remove(&tmp, cjk)
+			slice.Remove(&lang, tmp)
+		}
+
 		width, weight, slant := parseFontStyle(m[1])
 		spacing := parseSpacing(m[1])
 		outline := parseOutline(m[1])
@@ -400,7 +408,7 @@ func LoadFonts(c Collection) Collection {
 	ch := make(chan struct{}, 100) // ch is a chan to avoid "too many open files" when os exec
 
 	for _, font := range fontsInstalled {
-		log.Printf("Parsing %s font...", font)
+		log.Printf("Parsing %s...", font)
 		go func(path string) {
 			defer wg.Done()
 			defer func() { <-ch }() // release chan

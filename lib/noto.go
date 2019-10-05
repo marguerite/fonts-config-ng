@@ -1,16 +1,32 @@
 package lib
 
 import (
+	"fmt"
 	"github.com/marguerite/util/slice"
 	"reflect"
 	"strings"
 )
 
-type NotoFPLs []NotoFPL
+type NotoLPLs []NotoLPL
 
-func (fpl NotoFPLs) GenLatinFPL() string {
+func (lpl *NotoLPLs) AppendFont(lang, font string) {
+	found := false
+	for i, v := range *lpl {
+		if v.Lang == lang {
+			found = true
+			(*lpl)[i].AppendFont(font)
+		}
+	}
+	if !found {
+		v := NewNotoLPL(lang, "none")
+		v.AppendFont(font)
+		*lpl = append(*lpl, v)
+	}
+}
+
+func (lpl NotoLPLs) GenLPL() string {
 	str := ""
-	for _, font := range fpl {
+	for _, font := range lpl {
 		if isCJK(font.Lang) {
 			continue
 		}
@@ -27,7 +43,8 @@ func (fpl NotoFPLs) GenLatinFPL() string {
 	return str
 }
 
-type NotoFPL struct {
+//NotoLPL Noto's Language Preference List
+type NotoLPL struct {
 	Lang       string
 	NameLang   string
 	EditMethod string
@@ -36,42 +53,60 @@ type NotoFPL struct {
 	Monospace  []string
 }
 
-func NewNotoFPL(lang, method string) NotoFPL {
-	return NotoFPL{lang, lang, method, []string{}, []string{}, []string{}}
+func NewNotoLPL(lang, method string) NotoLPL {
+	return NotoLPL{lang, lang, method, []string{}, []string{}, []string{}}
 }
 
-func (fpl *NotoFPL) AppendByFontType(font string) {
-	fv := reflect.ValueOf(fpl).Elem()
+func (lpl *NotoLPL) AppendFont(font string) {
+	fv := reflect.ValueOf(lpl).Elem()
 	generic := getGenericFamily(font)
 	if generic == "sans-serif" {
 		generic = "sans"
 	}
 	v := fv.FieldByName(strings.Title(generic))
-	if v.IsValid() && v.CanSet() {
-		v.Set(reflect.Append(v, reflect.ValueOf(font)))
+	if v.IsValid() {
+		if v.Len() == 0 {
+			v.Set(reflect.Append(v, reflect.ValueOf(font)))
+		} else {
+			if b, err := slice.Contains(v.Interface(), font); !b && err == nil {
+				v.Set(reflect.Append(v, reflect.ValueOf(font)))
+			}
+		}
 	}
 }
 
 //GenNotoConfig generate fontconfig for Noto Fonts
 func GenNotoConfig(fonts Collection, userMode bool) {
-	defaultFamilies, fpl := genNotoConfig(fonts, userMode)
-	defaultPos := GetConfigLocation("notoDefault", userMode)
-	fplPos := GetConfigLocation("notoPrefer", userMode)
-	overwriteOrRemoveFile(defaultPos, []byte(defaultFamilies), 0644)
-	overwriteOrRemoveFile(fplPos, []byte(fpl), 0644)
+	fonts = fonts.FindByPath("Noto")
+	family := genNotoDefaultFamily(fonts, userMode)
+	lpl := genNotoConfig(fonts, userMode)
+	faPos := GetConfigLocation("notoDefault", userMode)
+	lplPos := GetConfigLocation("notoPrefer", userMode)
+	overwriteOrRemoveFile(faPos, []byte(family), 0644)
+	overwriteOrRemoveFile(lplPos, []byte(lpl), 0644)
 }
 
-func genNotoConfig(fonts Collection, userMode bool) (string, string) {
-	fonts = fonts.FindByPath("Noto")
-	fpl := NotoFPLs{}
-
-	defaultFamilies := genConfigPreamble(userMode, "Default families for Noto Fonts installed on your system.")
+func genNotoDefaultFamily(fonts Collection, userMode bool) string {
+	str := genConfigPreamble(userMode, "<!--Default families for Noto Fonts installed on your system.-->")
+	// font names across different font.Name may be equal.
+	m := make(map[string]struct{})
 
 	for _, font := range fonts {
-		defaultFamilies += genDefaultFamilyNoto(font)
+		for _, name := range font.Name {
+			if _, ok := m[name]; !ok {
+				m[name] = struct{}{}
+				str += genDefaultFamily(name)
+			}
+		}
 	}
 
-	defaultFamilies += "</fontconfig>\n"
+	str += "</fontconfig>\n"
+
+	return str
+}
+
+func genNotoConfig(fonts Collection, userMode bool) string {
+	lpl := NotoLPLs{}
 
 	nonLangFonts := []string{"Noto Sans", "Noto Sans Disp", "Noto Sans Display",
 		"Noto Sans Mono", "Noto Sans Symbols", "Noto Sans Symbols2",
@@ -84,20 +119,19 @@ func genNotoConfig(fonts Collection, userMode bool) (string, string) {
 				if lang == "und-zsye" {
 					continue
 				}
-				f := NewNotoFPL(lang, "none")
+
 				for _, name := range font.UnstyledName() {
-					f.AppendByFontType(name)
+					lpl.AppendFont(lang, name)
 				}
-				fpl = append(fpl, f)
 			}
 		}
 	}
 
-	langFPL := genConfigPreamble(userMode, "Language specific family preference list for Noto Fonts.") +
-		fpl.GenLatinFPL() +
+	str := genConfigPreamble(userMode, "<!--Language specific family preference list for Noto Fonts.-->") +
+		lpl.GenLPL() +
 		"</fontconfig>\n"
 
-	return defaultFamilies, langFPL
+	return str
 }
 
 // genFPLForLang generate family preference list of fonts for a generic font name
@@ -113,14 +147,11 @@ func genFPLForLang(generic, lang string, fonts []string) string {
 	return str
 }
 
-//genDefaultFamilyNoto generate default family fontconfig block for Noto Fonts
-func genDefaultFamilyNoto(font Font) string {
-	str := ""
-	for _, name := range font.Name {
-		str += "\t<alias>\n\t\t<family>" + name + "</family>\n\t\t<default>\n\t\t\t<family>"
-		str += getGenericFamily(name)
-		str += "</family>\n\t\t</default>\n\t</alias>\n\n"
-	}
+//genDefaultFamily generate default family fontconfig block for font name
+func genDefaultFamily(name string) string {
+	str := "\t<alias>\n\t\t<family>" + name + "</family>\n\t\t<default>\n\t\t\t<family>"
+	str += getGenericFamily(name)
+	str += "</family>\n\t\t</default>\n\t</alias>\n\n"
 	return str
 }
 
