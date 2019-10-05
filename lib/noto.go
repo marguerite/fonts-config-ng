@@ -2,63 +2,73 @@ package lib
 
 import (
 	"fmt"
+	"github.com/marguerite/util/fileutils"
 	"github.com/marguerite/util/slice"
 	"reflect"
 	"strings"
 )
 
-type NotoLPLs []NotoLPL
+type NotoLFPLs []NotoLFPL
 
-func (lpl *NotoLPLs) AppendFont(lang, font string) {
+func (lfpl *NotoLFPLs) AppendFont(lang, font string) {
 	found := false
-	for i, v := range *lpl {
+	for i, v := range *lfpl {
 		if v.Lang == lang {
 			found = true
-			(*lpl)[i].AppendFont(font)
+			(*lfpl)[i].AppendFont(font)
 		}
 	}
 	if !found {
-		v := NewNotoLPL(lang, "none")
+		v := NewNotoLFPL(lang, "none")
 		v.AppendFont(font)
-		*lpl = append(*lpl, v)
+		*lfpl = append(*lfpl, v)
 	}
 }
 
-func (lpl NotoLPLs) GenLPL() string {
+//FindByLang Find lang item by lang in lfpl.
+func (lfpl NotoLFPLs) FindByLang(lang []string) NotoLFPLs {
+	n := NotoLFPLs{}
+	for _, v := range lfpl {
+		if b, err := slice.Contains(lang, v.Lang); b && err == nil {
+			n = append(n, v)
+		}
+	}
+	return n
+}
+
+func (lfpl NotoLFPLs) GenLFPL() string {
 	str := ""
-	for _, font := range lpl {
-		if isCJK(font.Lang) {
-			continue
-		}
-		if len(font.Sans) > 0 {
-			str += genFPLForLang("sans-serif", font.Lang, font.Sans)
-		}
-		if len(font.Serif) > 0 {
-			str += genFPLForLang("serif", font.Lang, font.Serif)
-		}
-		if len(font.Monospace) > 0 {
-			str += genFPLForLang("monospace", font.Lang, font.Monospace)
+	for _, v := range lfpl {
+		if v.CJK {
+
+		} else {
+			str += genLatinFPL(v)
 		}
 	}
 	return str
 }
 
-//NotoLPL Noto's Language Preference List
-type NotoLPL struct {
+type NotoLFPL struct {
 	Lang       string
 	NameLang   string
+	CJK        bool
 	EditMethod string
 	Sans       []string
 	Serif      []string
 	Monospace  []string
 }
 
-func NewNotoLPL(lang, method string) NotoLPL {
-	return NotoLPL{lang, lang, method, []string{}, []string{}, []string{}}
+func NewNotoLFPL(lang, method string) NotoLFPL {
+	nameLang := lang
+	cjk := false
+	if fileutils.HasPrefixOrSuffix(lang, "zh-", "ja", "ko") != 0 {
+		cjk = true
+	}
+	return NotoLFPL{lang, nameLang, cjk, method, []string{}, []string{}, []string{}}
 }
 
-func (lpl *NotoLPL) AppendFont(font string) {
-	fv := reflect.ValueOf(lpl).Elem()
+func (lfpl *NotoLFPL) AppendFont(font string) {
+	fv := reflect.ValueOf(lfpl).Elem()
 	generic := getGenericFamily(font)
 	if generic == "sans-serif" {
 		generic = "sans"
@@ -79,11 +89,11 @@ func (lpl *NotoLPL) AppendFont(font string) {
 func GenNotoConfig(fonts Collection, userMode bool) {
 	fonts = fonts.FindByPath("Noto")
 	family := genNotoDefaultFamily(fonts, userMode)
-	lpl := genNotoConfig(fonts, userMode)
+	lfpl := genNotoConfig(fonts, userMode)
 	faPos := GetConfigLocation("notoDefault", userMode)
-	lplPos := GetConfigLocation("notoPrefer", userMode)
+	lfplPos := GetConfigLocation("notoPrefer", userMode)
 	overwriteOrRemoveFile(faPos, []byte(family), 0644)
-	overwriteOrRemoveFile(lplPos, []byte(lpl), 0644)
+	overwriteOrRemoveFile(lfplPos, []byte(lfpl), 0644)
 }
 
 func genNotoDefaultFamily(fonts Collection, userMode bool) string {
@@ -106,7 +116,7 @@ func genNotoDefaultFamily(fonts Collection, userMode bool) string {
 }
 
 func genNotoConfig(fonts Collection, userMode bool) string {
-	lpl := NotoLPLs{}
+	lfpl := NotoLFPLs{}
 
 	nonLangFonts := []string{"Noto Sans", "Noto Sans Disp", "Noto Sans Display",
 		"Noto Sans Mono", "Noto Sans Symbols", "Noto Sans Symbols2",
@@ -121,14 +131,16 @@ func genNotoConfig(fonts Collection, userMode bool) string {
 				}
 
 				for _, name := range font.UnstyledName() {
-					lpl.AppendFont(lang, name)
+					lfpl.AppendFont(lang, name)
 				}
 			}
 		}
 	}
 
+	fmt.Println(lfpl)
+
 	str := genConfigPreamble(userMode, "<!--Language specific family preference list for Noto Fonts.-->") +
-		lpl.GenLPL() +
+		lfpl.GenLFPL() +
 		"</fontconfig>\n"
 
 	return str
@@ -136,14 +148,25 @@ func genNotoConfig(fonts Collection, userMode bool) string {
 
 // genFPLForLang generate family preference list of fonts for a generic font name
 // and a specific language
-func genFPLForLang(generic, lang string, fonts []string) string {
-	str := "\t<match>\n\t\t<test name=\"family\">\n\t\t\t<string>" + generic + "</string>\n\t\t</test>\n"
-	str += "\t\t<test name=\"lang\">\n\t\t\t<string>" + lang + "</string>\n\t\t</test>\n"
-	str += "\t\t<edit name=\"family\" mode=\"prepend\">\n"
-	for _, f := range fonts {
-		str += "\t\t\t<string>" + f + "</string>\n"
+func genLatinFPL(lfpl NotoLFPL) string {
+	str := ""
+	for _, generic := range []string{"sans-serif", "serif", "monospace"} {
+		mark := strings.Title(generic)
+		if mark == "Sans-Serif" {
+			mark = "Sans"
+		}
+		v := reflect.ValueOf(lfpl).FieldByName(mark)
+		if v.Len() > 0 {
+			str += "\t<match>\n\t\t<test name=\"family\">\n\t\t\t<string>" + generic + "</string>\n\t\t</test>\n"
+			str += "\t\t<test name=\"lang\">\n\t\t\t<string>" + lfpl.Lang + "</string>\n\t\t</test>\n"
+			str += "\t\t<edit name=\"family\" mode=\"prepend\">\n"
+			for i := 0; i < v.Len(); i++ {
+				str += "\t\t\t<string>" + v.Index(i).String() + "</string>\n"
+			}
+			str += "\t\t</edit>\n\t</match>\n\n"
+		}
 	}
-	str += "\t\t</edit>\n\t</match>\n\n"
+
 	return str
 }
 
@@ -170,11 +193,4 @@ func getGenericFamily(name string) string {
 		return "serif"
 	}
 	return "sans-serif"
-}
-
-func isCJK(lang string) bool {
-	if strings.HasPrefix(lang, "zh-") || lang == "ja" || lang == "ko" {
-		return true
-	}
-	return false
 }
