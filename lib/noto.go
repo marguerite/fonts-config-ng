@@ -49,13 +49,12 @@ func (lfpl NotoLFPLs) GenLFPL() string {
 }
 
 type NotoLFPL struct {
-	Lang       string
-	NameLang   string
-	CJK        bool
-	EditMethod string
-	Sans       []string
-	Serif      []string
-	Monospace  []string
+	Lang      string
+	NameLang  string
+	CJK       bool
+	Sans      FPL
+	Serif     FPL
+	Monospace FPL
 }
 
 func NewNotoLFPL(lang, method string) NotoLFPL {
@@ -64,23 +63,138 @@ func NewNotoLFPL(lang, method string) NotoLFPL {
 	if fileutils.HasPrefixOrSuffix(lang, "zh-", "ja", "ko") != 0 {
 		cjk = true
 	}
-	return NotoLFPL{lang, nameLang, cjk, method, []string{}, []string{}, []string{}}
+	return NotoLFPL{lang, nameLang, cjk, method, FPL{}, FPL{}, FPL{}}
 }
 
-func (lfpl *NotoLFPL) AppendFont(font string) {
-	fv := reflect.ValueOf(lfpl).Elem()
+func (lfpl *NotoLFPL) AddFont(font string, c Collection) {
 	generic := getGenericFamily(font)
 	if generic == "sans-serif" {
 		generic = "sans"
 	}
-	v := fv.FieldByName(strings.Title(generic))
+	generic = strings.Title(generic)
+
+	fv := reflect.ValueOf(lfpl).Elem()
+	v := fv.FieldByName(generic)
+
 	if v.IsValid() {
+
 		if v.Len() == 0 {
 			v.Set(reflect.Append(v, reflect.ValueOf(font)))
 		} else {
 			if b, err := slice.Contains(v.Interface(), font); !b && err == nil {
 				v.Set(reflect.Append(v, reflect.ValueOf(font)))
 			}
+		}
+	}
+}
+
+type FPL struct {
+	Prepend ModificationList
+	Append  ModificationList
+	Default CandidateList
+}
+
+func NewFPL(font, lang string, ppd, apd ModificationList, c Collection) FPL {
+	defa := List{}
+	defa.Add(font, lang)
+	if fileutils.HasPrefixOrSuffix(lang, "zh-", "ja", "ko") != 0 {
+		if variant := genAllVariantsAlternative(font, c); len(variant) > 0 {
+			apd.Prepend(variant)
+		}
+	}
+	return FPL{ppd, apd, defa}
+}
+
+func (f *FPL) Add(font string) {
+	f.Default.Add(font, f.Lang)
+}
+
+func genAllVariantsAlternative(font string, c Collection) string {
+	f := strings.Split(font, " ")
+	name := strings.Join(f[:2], " ") + " CJK " + f[len(f)-1]
+	if len(c.FindByName(name)) > 0 {
+		return name
+	}
+	return ""
+}
+
+type ModificationList []string
+
+//Installed leave the installed font in ModificationList only
+func (m *ModificationList) Installed(c Collection) {
+	for _, v := range *m {
+		if len(c.FindByName(v)) == 0 {
+			slice.Remove(m, v)
+		}
+	}
+}
+
+func (m *ModificationList) Prepend(font string) {
+	if b, err := slice.Contains(*m, font); !b && err != nil {
+		*m = append([]string{font}, *m...)
+	}
+}
+
+func genCJKPrependML(generic, lang string, c Collection) ModificationList {
+	m := ModificationList{}
+	if generic == "Sans" || generic == "Serif" {
+		m = append(m, "Noto "+generic)
+	}
+	ja := map[string][]string{"Sans": {"IPAPGothic", "IPAexGothic", "M+ 1c", "M+ 1p", "VL PGothic"},
+		"Serif":     {"IPAPMincho", "IPAexMincho"},
+		"Monospace": {"IPAGothic", "M+ 1m", "VL Gothic"}}
+	if lang == "ja" {
+		slice.Concat(&m, ja[generic])
+	}
+	return m.Installed(c)
+}
+
+func genCJKAppendML(generic, lang string, c Collection) ModificationList {
+	m := ModificationList{}
+	ko := map[string]string{"Sans": "NanumGothic", "Serif": "NanumMyeongjo", "Monospace": "NanumGothicCoding"}
+	ja := map[string]string{"Sans": "IPAGothic", "Serif": "IPAMincho"}
+	switch lang {
+	case "zh-tw", "zh-hk", "zh-mo":
+		m = append(m, "CMEXSong")
+	case "ja":
+		if _, ok := ja[generic]; ok {
+			m = append(m, ja[generic])
+		}
+	case "ko":
+		m = append(m, ko[generic])
+	}
+	return m.Installed(c)
+}
+
+//CandidateList Font Candidate List
+type CandidateList []string
+
+//Add Add or Prepend to List
+func (l *CandidateList) Add(font, lang string) {
+	m := map[string][]string{"JP": {"ja"}, "KR": {"ko"},
+		"SC": {"zh-cn", "zh-sg"},
+		"TC": {"zh-tw", "zh-hk", "zh-mo"}}
+
+	// "Noto Sans JP" -> "JP"
+	s, ok := m[font[len(font)-2:]]
+
+	if ok {
+		// "Noto Sans JP" and language is "ja"
+		if b, err := slice.Contains(s, lang); b && err == nil {
+			if b1, err1 := slice.Contains(*l, font); !b1 && err1 == nil {
+				// Prepend
+				*l = append([]string{font}, *l...)
+			}
+		} else {
+			// Normal Add
+			if b1, err1 := slice.Contains(*l, font); !b1 && err1 == nil {
+				*l = append(*l, font)
+			}
+		}
+	} else {
+		// Latin Fonts, Normal Add
+		if b, err := slice.Contains(*l, font); !b && err == nil {
+			*l = append(*l, font)
 		}
 	}
 }
