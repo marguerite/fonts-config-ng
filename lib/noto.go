@@ -1,10 +1,10 @@
 package lib
 
 import (
-	"fmt"
-	"github.com/marguerite/util/slice"
 	"reflect"
 	"strings"
+
+	"github.com/marguerite/util/slice"
 )
 
 type NotoLFPLs []NotoLFPL
@@ -27,7 +27,7 @@ func (lfpl *NotoLFPLs) AddFont(lang, font, generic, list string) {
 func (lfpl NotoLFPLs) GenLFPL() string {
 	str := ""
 	for _, v := range lfpl {
-		str += genLatinFPL(v)
+		str += genFPL(v)
 	}
 	return str
 }
@@ -66,8 +66,8 @@ func (lfpl *NotoLFPL) AddFont(font, generic, list string) {
 						// Prepend
 						s1 := reflect.MakeSlice(reflect.SliceOf(reflect.TypeOf(font)), v1.Len()+1, v1.Cap()+1)
 						s1.Index(0).Set(reflect.ValueOf(font))
-						for i := 1; i < v1.Len(); i++ {
-							s1.Index(i).Set(v1.Index(i - 1))
+						for i := 0; i < v1.Len(); i++ {
+							s1.Index(i + 1).Set(v1.Index(i))
 						}
 						v1.Set(s1)
 					}
@@ -178,24 +178,18 @@ func genNotoConfig(fonts Collection, userMode bool) string {
 	nonLangFonts := []string{"Noto Sans", "Noto Sans Disp", "Noto Sans Display",
 		"Noto Sans Mono", "Noto Sans Symbols", "Noto Sans Symbols2",
 		"Noto Serif", "Noto Serif Disp", "Noto Serif Display",
-		"Noto Mono"}
+		"Noto Mono", "Noto Emoji", "Noto Color Emoji"}
 
 	for _, font := range fonts {
 		if b, err := slice.Contains(font.Name, nonLangFonts); !b && err == nil && len(font.Lang) > 0 {
 			for _, lang := range font.Lang {
-				if lang == "und-zsye" {
-					continue
-				}
-
 				for _, name := range font.UnstyledName() {
 					lfpl.AddFont(lang, name, strings.Title(getGenericFamily(name)), "Default")
 				}
 			}
 		}
 	}
-  fmt.Println(lfpl)
 	completeCJK(&lfpl, fonts)
-	fmt.Println(lfpl)
 
 	str := genConfigPreamble(userMode, "<!-- Language specific family preference list for Noto Fonts installed on your system.-->") +
 		lfpl.GenLFPL() +
@@ -206,14 +200,7 @@ func genNotoConfig(fonts Collection, userMode bool) string {
 
 // genFPL generate family preference list of fonts for a generic font name
 // and a specific language
-// type NotoLFPL struct {
-//	Lang      string
-//	NameLang  string
-//	Sans      FPL
-//	Serif     FPL
-//	Monospace FPL
-//}
-func genLatinFPL(lfpl NotoLFPL) string {
+func genFPL(lfpl NotoLFPL) string {
 	str := ""
 	for _, generic := range []string{"sans-serif", "serif", "monospace"} {
 		mark := generic
@@ -222,8 +209,7 @@ func genLatinFPL(lfpl NotoLFPL) string {
 		}
 		mark = strings.Title(mark)
 		v := reflect.ValueOf(lfpl).FieldByName(mark) //FPL
-		s := ""
-		s += "\t<match>\n\t\t<test name=\"family\">\n\t\t\t<string>" + generic + "</string>\n\t\t</test>\n"
+		s := "\t<match>\n\t\t<test name=\"family\">\n\t\t\t<string>" + generic + "</string>\n\t\t</test>\n"
 		s += "\t\t<test name=\"lang\">\n\t\t\t<string>" + lfpl.Lang + "</string>\n\t\t</test>\n"
 		s += "\t\t<edit name=\"family\" mode=\"prepend\">\n"
 		s1 := ""
@@ -274,78 +260,169 @@ func getGenericFamily(name string) string {
 	return "sans"
 }
 
-//FIXME
 func completeCJK(lfpl *NotoLFPLs, c Collection) {
 	for i, v := range *lfpl {
 		switch v.Lang {
-		case "zh-tw", "zh-hk", "zh-mo":
+		case "zh-cn", "zh-sg":
 			if len(v.Sans.Default) > 0 {
-				ppd := CandidateList{"Noto Sans"}
-				ppd.Installed()
-				(*lfpl)[i].Sans.Prepend = ppd
+				ppd := v.Sans.Prepend
+				ppd = append(ppd, "Noto Sans")
+				ppd.Installed(c)
+				if len(ppd) > 0 {
+					(*lfpl)[i].Sans.Prepend = ppd
+				}
 				variant := genAllVariantsAlternative(v.Sans.Default[0], c)
 				if len(variant) > 0 {
-					apd := CandidateList{variant}
-					apd.Installed()
-					(*lfpl)[i].Sans.Append = apd
+					apd := v.Sans.Append
+					apd = append(apd, variant)
+					apd.Installed(c)
+					if len(apd) > 0 {
+						(*lfpl)[i].Sans.Append = apd
+					}
 				}
 			}
 			if len(v.Serif.Default) > 0 {
-				ppd := CandidateList{"Noto Serif"}
-				ppd.Installed()
-				(*lfpl)[i].Serif.Prepend = ppd
+				ppd := v.Serif.Prepend
+				ppd = append(ppd, "Noto Serif")
+				ppd.Installed(c)
+				if len(ppd) > 0 {
+					(*lfpl)[i].Serif.Prepend = ppd
+				}
 				variant := genAllVariantsAlternative(v.Serif.Default[0], c)
-				apd := CandidateList{}
+				if len(variant) > 0 {
+					apd := v.Serif.Append
+					apd = append(apd, variant)
+					apd.Installed(c)
+					if len(apd) > 0 {
+						(*lfpl)[i].Serif.Append = apd
+					}
+				}
+			}
+		case "zh-tw", "zh-hk", "zh-mo":
+			if len(v.Sans.Default) > 0 {
+				ppd := v.Sans.Prepend
+				ppd = append(ppd, "Noto Sans")
+				ppd.Installed(c)
+				if len(ppd) > 0 {
+					(*lfpl)[i].Sans.Prepend = ppd
+				}
+				variant := genAllVariantsAlternative(v.Sans.Default[0], c)
+				if len(variant) > 0 {
+					apd := v.Sans.Append
+					apd = append(apd, variant)
+					apd.Installed(c)
+					if len(apd) > 0 {
+						(*lfpl)[i].Sans.Append = apd
+					}
+				}
+			}
+			if len(v.Serif.Default) > 0 {
+				ppd := v.Serif.Prepend
+				ppd = append(ppd, "Noto Serif")
+				ppd.Installed(c)
+				if len(ppd) > 0 {
+					(*lfpl)[i].Serif.Prepend = ppd
+				}
+				variant := genAllVariantsAlternative(v.Serif.Default[0], c)
+				apd := v.Serif.Append
 				if len(variant) > 0 {
 					apd = append(apd, variant)
 				}
 				apd = append(apd, "CMEXSong")
-				apd.Installed()
-        (*lfpl)[i].Serif.Append = apd
+				apd.Installed(c)
+				if len(apd) > 0 {
+					(*lfpl)[i].Serif.Append = apd
+				}
 			}
 		case "ko":
 			if len(v.Sans.Default) > 0 {
-				ppd := CandidateList{"Noto Sans"}
-				apd := CandidateList{"NanumGothic"}
-				ppd.Installed()
-				apd.Installed()
-				(*lfpl)[i].Sans.Prepend = ppd
-        (*lfpl)[i].Sans.Append = apd
+				ppd := v.Sans.Prepend
+				ppd = append(ppd, "Noto Sans")
+				ppd.Installed(c)
+				if len(ppd) > 0 {
+					(*lfpl)[i].Sans.Prepend = ppd
+				}
+				apd := v.Sans.Append
+				variant := genAllVariantsAlternative(v.Sans.Default[0], c)
+				if len(variant) > 0 {
+					apd = append(apd, variant)
+				}
+				apd = append(apd, "NanumGothic")
+				apd.Installed(c)
+				if len(apd) > 0 {
+					(*lfpl)[i].Sans.Append = apd
+				}
 			}
 			if len(v.Serif.Default) > 0 {
-				ppd := CandidateList{"Noto Serif"}
-				apd := CandidateList{"NanumMyeongjo"}
-				ppd.Installed()
-				apd.Installed()
-				(*lfpl)[i].Serif.Prepend = ppd
-        (*lfpl)[i].Serif.Append = apd
+				ppd := v.Serif.Prepend
+				ppd = append(ppd, "Noto Serif")
+				ppd.Installed(c)
+				if len(ppd) > 0 {
+					(*lfpl)[i].Serif.Prepend = ppd
+				}
+				apd := v.Serif.Append
+				variant := genAllVariantsAlternative(v.Serif.Default[0], c)
+				if len(variant) > 0 {
+					apd = append(apd, variant)
+				}
+				apd = append(apd, "NanumMyeongjo")
+				apd.Installed(c)
+				if len(apd) > 0 {
+					(*lfpl)[i].Serif.Append = apd
+				}
 			}
 			if len(v.Monospace.Default) > 0 {
-				apd := CandidateList{"NanumGothicCoding"}
-				apd.Installed()
-        (*lfpl)[i].Monospace.Append = apd
+				apd := v.Monospace.Append
+				apd = append(apd, "NanumGothicCoding")
+				apd.Installed(c)
+				if len(apd) > 0 {
+					(*lfpl)[i].Monospace.Append = apd
+				}
 			}
 		case "ja":
 			if len(v.Sans.Default) > 0 {
-				ppd := CandidateList{"IPAPGothic", "IPAexGothic", "M+ 1c", "M+ 1p", "VL PGothic", "Noto Sans"}
-				ppd.Installed()
-				apd := CandidateList{"IPAGothic"}
-				apd.Installed()
-				(*lfpl)[i].Sans.Prepend = ppd
-				(*lfpl)[i].Sans.Append = apd
+				ppd := v.Sans.Prepend
+				slice.Concat(&ppd, CandidateList{"IPAPGothic", "IPAexGothic", "M+ 1c", "M+ 1p", "VL PGothic", "Noto Sans"})
+				ppd.Installed(c)
+				if len(ppd) > 0 {
+					(*lfpl)[i].Sans.Prepend = ppd
+				}
+				apd := v.Sans.Append
+				variant := genAllVariantsAlternative(v.Sans.Default[0], c)
+				if len(variant) > 0 {
+					apd = append(apd, variant)
+				}
+				apd = append(apd, "IPAGothic")
+				apd.Installed(c)
+				if len(apd) > 0 {
+					(*lfpl)[i].Sans.Append = apd
+				}
 			}
 			if len(v.Serif.Default) > 0 {
-				ppd := CandidateList{"IPAPMincho", "IPAexMincho", "Noto Serif"}
-				ppd.Installed()
-				apd := CandidateList{"IPAMincho"}
-				apd.Installed()
-        (*lfpl)[i].Serif.Prepend = ppd
-				(*lfpl)[i].Serif.Append = apd
+				ppd := v.Serif.Prepend
+				slice.Concat(&ppd, CandidateList{"IPAPMincho", "IPAexMincho", "Noto Serif"})
+				ppd.Installed(c)
+				if len(ppd) > 0 {
+					(*lfpl)[i].Serif.Prepend = ppd
+				}
+				apd := v.Serif.Append
+				variant := genAllVariantsAlternative(v.Serif.Default[0], c)
+				if len(variant) > 0 {
+					apd = append(apd, variant)
+				}
+				apd = append(apd, "IPAMincho")
+				apd.Installed(c)
+				if len(apd) > 0 {
+					(*lfpl)[i].Serif.Append = apd
+				}
 			}
 			if len(v.Monospace.Default) > 0 {
-				ppd := CandidateList{"IPAGothic", "M+ 1m", "VL Gothic"}
-				ppd.Installed()
-        (*lfpl)[i].Monospace.Prepend = ppd
+				ppd := v.Monospace.Prepend
+				slice.Concat(&ppd, CandidateList{"IPAGothic", "M+ 1m", "VL Gothic"})
+				ppd.Installed(c)
+				if len(ppd) > 0 {
+					(*lfpl)[i].Monospace.Prepend = ppd
+				}
 			}
 		}
 	}
