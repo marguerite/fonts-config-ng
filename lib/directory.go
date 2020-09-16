@@ -3,9 +3,6 @@ package lib
 import (
 	"bufio"
 	"fmt"
-	"github.com/marguerite/util/dirutils"
-	"github.com/marguerite/util/fileutils"
-	"github.com/marguerite/util/slice"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +10,10 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	dirutils "github.com/marguerite/util/dir"
+	"github.com/marguerite/util/fileutils"
+	"github.com/marguerite/util/slice"
 )
 
 // FontScaleEntry presents an item in fonts.scale.

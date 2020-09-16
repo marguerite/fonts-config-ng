@@ -3,10 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/marguerite/util/dirutils"
-	"github.com/marguerite/util/slice"
-	"github.com/openSUSE/fonts-config/lib"
-	"github.com/urfave/cli"
 	"io/ioutil"
 	"log"
 	"os"
@@ -15,6 +11,11 @@ import (
 	"reflect"
 	"strings"
 	"unsafe"
+
+	dirutils "github.com/marguerite/util/dir"
+	"github.com/marguerite/util/slice"
+	"github.com/openSUSE/fonts-config/lib"
+	"github.com/urfave/cli"
 )
 
 // Version fonts-config's version

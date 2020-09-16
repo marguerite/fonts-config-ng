@@ -31,9 +31,8 @@ func Search(cmd string) (string, error) {
 				return "", fmt.Errorf("%s doesn't exist in current directory or $PATH.", cmd)
 			}
 			return f1, nil
-		} else {
-			return "", fmt.Errorf("Another unhandled non-IsNotExist PathError occurs %s", err.Error())
 		}
+		return "", fmt.Errorf("Another unhandled non-IsNotExist PathError occurs %s", err.Error())
 	}
 	if f.IsDir() {
 		return "", fmt.Errorf("%s is a directory", cmd)

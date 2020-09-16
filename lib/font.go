@@ -3,9 +3,6 @@ package lib
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/marguerite/util/dirutils"
-	"github.com/marguerite/util/fileutils"
-	"github.com/marguerite/util/slice"
 	"log"
 	"os"
 	"os/exec"
@@ -16,6 +13,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	dirutils "github.com/marguerite/util/dir"
+	"github.com/marguerite/util/fileutils"
+	"github.com/marguerite/util/slice"
 )
 
 //Collection A collection of type Font
