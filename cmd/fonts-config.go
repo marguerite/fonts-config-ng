@@ -347,7 +347,7 @@ func main() {
 		lib.GenFamilyPreferenceLists(userMode, config)
 		lib.GenEmojiBlacklist(collection, userMode, config)
 		lib.GenNotoConfig(collection, userMode)
-		lib.FixDualSpacing(collection, userMode)
+		lib.GenCJKConfig(collection, userMode)
 
 		b, _ := collection.Encode()
 		ioutil.WriteFile(cache, b, 0644)

@@ -85,7 +85,7 @@ func GenFamilyPreferenceLists(userMode bool, opts Options) {
 	fplText += buildFPL("sans-serif", opts.PreferSansFamilies, userMode, opts)
 	fplText += buildFPL("serif", opts.PreferSerifFamilies, userMode, opts)
 	fplText += buildFPL("monospace", opts.PreferMonoFamilies, userMode, opts)
-	fplText += "</fontconfig>\n"
+	fplText += FontConfigSuffix
 
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.", fplFile))
 

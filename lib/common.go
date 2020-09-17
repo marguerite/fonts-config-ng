@@ -18,6 +18,9 @@ const VerbosityVerbose int = 1
 // VerbosityQuiet an interger to control verbose output
 const VerbosityQuiet int = 0
 
+// FontConfigSuffix suffix for every fontconfig configuration file
+const FontConfigSuffix string = "</fontconfig>\n"
+
 func debug(verbosity int, level int, text string) {
 	if verbosity >= level {
 		log.Println(text)
@@ -63,12 +66,12 @@ func GetConfigLocation(c string, userMode bool) string {
 		"fc":          {"fonts-config", "fonts-config"},
 		"render":      {"10-rendering-options.conf", "rendering-options.conf"},
 		"fpl":         {"58-family-prefer-local.conf", "family-prefer.conf"},
-		"dual":        {"20-fix-globaladvance.conf", "fix-globaladvance.conf"},
 		"blacklist":   {"81-emoji-blacklist-glyphs.conf", "emoji-blacklist-glyphs.conf"},
 		"tt":          {"10-group-tt-hinted-fonts.conf", "tt-hinted-fonts.conf"},
 		"nonTT":       {"10-group-tt-non-hinted-fonts.conf", "tt-non-hinted-fonts.conf"},
 		"notoDefault": {"49-family-default-noto.conf", "family-default-noto.conf"},
 		"notoPrefer":  {"59-family-prefer-lang-specific-noto.conf", "family-prefer-lang-specific-noto.conf"},
+		"cjk":         {"59-family-prefer-lang-specific-cjk.conf", "family-prefer-lang-specific-cjk.conf"},
 	}
 
 	if userMode {

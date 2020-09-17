@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"log"
 	"strconv"
 	"strings"
 )
@@ -80,4 +81,25 @@ func genDualConfig(f Font) string {
 		str += "\t\t<edit name=\"globaladvance\" mode=\"append\">\n\t\t\t<bool>false</bool>\n\t\t</edit>\n\t</match>\n"
 	}
 	return str
+}
+
+func genMatrix(font string, matrix []float64, langs []string) string {
+	out := ""
+
+	if len(matrix) != 4 {
+		log.Fatalf("Invalid matrix: %v", matrix)
+	}
+
+	for _, lang := range langs {
+		s := "\t<match target=\"font\">\n\t\t<test name=\"family\">\n\t\t\t<string>" + font + "</string>\n\t\t</test>\n"
+		s += "\t\t<test name=\"namelang\">\n\t\t\t<string>" + lang + "</string>\n\t\t</test>\n"
+		s += "\t\t<edit name=\"matrix\" mode=\"assign\">\n\t\t\t<times>\n\t\t\t\t<name>matrix</name>\n\t\t\t\t<matrix>\n"
+		s += "\t\t\t\t\t<double>" + strconv.FormatFloat(matrix[0], 'f', -1, 64) + "</double>\n"
+		s += "\t\t\t\t\t<double>" + strconv.FormatFloat(matrix[1], 'f', -1, 64) + "</double>\n"
+		s += "\t\t\t\t\t<double>" + strconv.FormatFloat(matrix[2], 'f', -1, 64) + "</double>\n"
+		s += "\t\t\t\t\t<double>" + strconv.FormatFloat(matrix[3], 'f', -1, 64) + "</double>\n"
+		s += "\t\t\t\t</matrix>\n\t\t\t</times>\n\t\t</edit>\n\t</match>\n\n"
+		out += s
+	}
+	return out
 }

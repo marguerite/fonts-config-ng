@@ -29,8 +29,8 @@ func genTTType(fonts Collection, userMode bool) (string, string) {
 		}
 	}
 
-	tt += "</fontconfig>\n"
-	nonTT += "</fontconfig>\n"
+	tt += FontConfigSuffix
+	nonTT += FontConfigSuffix
 
 	return tt, nonTT
 }

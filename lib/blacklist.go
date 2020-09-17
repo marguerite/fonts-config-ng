@@ -2,10 +2,11 @@ package lib
 
 import (
 	"fmt"
-	"github.com/marguerite/util/slice"
 	"log"
 	"strings"
 	"sync"
+
+	"github.com/marguerite/util/slice"
 )
 
 func getEmojiFontsByName(fonts Collection, emoji string) Collection {
@@ -116,7 +117,7 @@ func GenEmojiBlacklist(fonts Collection, userMode bool, opts Options) {
 	}
 
 	if len(conf) > 0 {
-		emojiConf = genConfigPreamble(userMode, "") + conf + "</fontconfig>\n"
+		emojiConf = genConfigPreamble(userMode, "") + conf + FontConfigSuffix
 	}
 
 	blacklistFile := GetConfigLocation("blacklist", userMode)

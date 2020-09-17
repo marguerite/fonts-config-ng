@@ -167,7 +167,7 @@ func genNotoDefaultFamily(fonts Collection, userMode bool) string {
 		}
 	}
 
-	str += "</fontconfig>\n"
+	str += FontConfigSuffix
 
 	return str
 }
@@ -193,7 +193,7 @@ func genNotoConfig(fonts Collection, userMode bool) string {
 
 	str := genConfigPreamble(userMode, "<!-- Language specific family preference list for Noto Fonts installed on your system.-->") +
 		lfpl.GenLFPL() +
-		"</fontconfig>\n"
+		FontConfigSuffix
 
 	return str
 }
