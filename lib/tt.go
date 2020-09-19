@@ -10,8 +10,8 @@ func GenTTType(fonts Collection, userMode bool) {
 }
 
 func genTTType(fonts Collection, userMode bool) (string, string) {
-	tt := genConfigPreamble(userMode, "<!-- TT instructed fonts installed on your system. Maybe CFF/PostScript based or Truetype based. -->")
-	nonTT := genConfigPreamble(userMode, "<!-- NON TT instructed fonts installed on your system.-->")
+	tt := genFcPreamble(userMode, "<!-- TT instructed fonts installed on your system. Maybe CFF/PostScript based or Truetype based. -->")
+	nonTT := genFcPreamble(userMode, "<!-- NON TT instructed fonts installed on your system.-->")
 
 	// font names across different font.Name may be equal.
 	m := make(map[string]struct{})
@@ -29,8 +29,8 @@ func genTTType(fonts Collection, userMode bool) (string, string) {
 		}
 	}
 
-	tt += FontConfigSuffix
-	nonTT += FontConfigSuffix
+	tt += FcSuffix
+	nonTT += FcSuffix
 
 	return tt, nonTT
 }

@@ -82,7 +82,7 @@ func (c Collection) FindByPath(restricts ...interface{}) Collection {
 func (c Collection) FindByName(restricts ...interface{}) Collection {
 	newC := Collection{}
 	for _, font := range c {
-		if _, err := restrictName(font.Name, restricts...); err == nil {
+		if _, err := getMatchedFontName(font.Name, restricts...); err == nil {
 			newC = append(newC, font)
 		}
 	}
@@ -160,18 +160,19 @@ func (f Font) UnstyledName() []string {
 	return unstyled
 }
 
-//SetName Set font name
+//SetName set font name
 func (f *Font) SetName(name []string) {
 	f.Name = name
 }
 
-//SetStyle Set font style
+//SetStyle set font style
 func (f *Font) SetStyle(width, weight, slant int) {
 	f.Width = width
 	f.Weight = weight
 	f.Slant = slant
 }
 
+//SetCharset set font charsets
 func (f *Font) SetCharset(charset Charset) {
 	f.Charset = charset
 }
@@ -425,14 +426,14 @@ func LoadFonts(c Collection) Collection {
 	return newC
 }
 
-func restrictName(names []string, restricts ...interface{}) ([]string, error) {
+func getMatchedFontName(names []string, restricts ...interface{}) ([]string, error) {
 	if len(restricts) == 0 {
 		return names, nil
 	}
 
 	_, ok := restricts[0].(*regexp.Regexp)
 	if reflect.ValueOf(restricts[0]).Kind() != reflect.String && !ok {
-		return []string{}, fmt.Errorf("Restrict term must be of type 'string' or '*regexp.Regexp'.")
+		return []string{}, fmt.Errorf("restrict term must be of type 'string' or '*regexp.Regexp'")
 	}
 
 	for _, name := range names {
@@ -448,7 +449,7 @@ func restrictName(names []string, restricts ...interface{}) ([]string, error) {
 			}
 		}
 	}
-	return []string{}, fmt.Errorf("No matched name found.")
+	return []string{}, fmt.Errorf("no matched name found")
 }
 
 func restrictPath(path string, restricts ...interface{}) (string, error) {
@@ -474,7 +475,7 @@ func restrictPath(path string, restricts ...interface{}) (string, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("No matched path found.")
+	return "", fmt.Errorf("no matched path found")
 }
 
 //GetFontsInstalled Get all font files installed on your system

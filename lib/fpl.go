@@ -69,7 +69,7 @@ func GenFamilyPreferenceLists(userMode bool, opts Options) {
 	fplFile := GetConfigLocation("fpl", userMode)
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Generating %s", fplFile))
 
-	fplText := genConfigPreamble(userMode, "")
+	fplText := genFcPreamble(userMode, "")
 
 	if userMode {
 		fplText += "\t<match target=\"pattern\">\n\t\t<edit name=\"user_preference_list\" mode=\"assign\">\n" +
@@ -85,7 +85,7 @@ func GenFamilyPreferenceLists(userMode bool, opts Options) {
 	fplText += buildFPL("sans-serif", opts.PreferSansFamilies, userMode, opts)
 	fplText += buildFPL("serif", opts.PreferSerifFamilies, userMode, opts)
 	fplText += buildFPL("monospace", opts.PreferMonoFamilies, userMode, opts)
-	fplText += FontConfigSuffix
+	fplText += FcSuffix
 
 	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.", fplFile))
 

@@ -18,8 +18,8 @@ const VerbosityVerbose int = 1
 // VerbosityQuiet an interger to control verbose output
 const VerbosityQuiet int = 0
 
-// FontConfigSuffix suffix for every fontconfig configuration file
-const FontConfigSuffix string = "</fontconfig>\n"
+// FcSuffix suffix for every fontconfig configuration file
+const FcSuffix string = "</fontconfig>\n"
 
 func debug(verbosity int, level int, text string) {
 	if verbosity >= level {

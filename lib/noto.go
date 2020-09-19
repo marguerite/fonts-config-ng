@@ -7,9 +7,9 @@ import (
 	"github.com/marguerite/util/slice"
 )
 
-type NotoLFPLs []NotoLFPL
+type LFPLs []LFPL
 
-func (lfpl *NotoLFPLs) AddFont(lang, font, generic, list string) {
+func (lfpl *LFPLs) AddFont(lang, font, generic, list string) {
 	found := false
 	for i, v := range *lfpl {
 		if v.Lang == lang {
@@ -18,38 +18,58 @@ func (lfpl *NotoLFPLs) AddFont(lang, font, generic, list string) {
 		}
 	}
 	if !found {
-		v := NewNotoLFPL(lang)
+		v := NewLFPL(lang)
 		v.AddFont(font, generic, list)
 		*lfpl = append(*lfpl, v)
 	}
 }
 
-func (lfpl NotoLFPLs) GenLFPL() string {
-	str := ""
+//GenLFPLsConfig turn Language grouped Family Preference List to Fontconfig Configuration
+func (lfpl LFPLs) GenLFPLsConfig() string {
+	config := ""
 	for _, v := range lfpl {
-		str += genFPL(v)
+		// we need a place to insert CJK comments for once.
+		if v.Lang == "ja" {
+			config += "<!--- Currently we use Region Specific Subset OpenType/CFF (Subset OTF)\n" +
+				"\tflavor of Google's Noto Sans/Serif CJK fonts, but previously we\n" +
+				"\tused Super OpenType/CFF Collection (Super OTC), and other distributions\n" +
+				"\tmay use Language specific OpenType/CFF (OTF) flavor. So\n" +
+				"\tNoto Sans/Serif CJK SC/TC/JP/KR are also common font names.-->\n\n" +
+				"<!--- fontconfig doesn't support the OpenType locl GSUB feature,\n" +
+				"\tso only the default glyph variant (JP) can be used in the\n" +
+				"\tSuper OTC and OTF flavors. We gave them very low priority\n" +
+				"\ton openSUSE even if they were installed manually.-->\n\n" +
+				"<!--- 1. Prepend 'Noto Sans/Serif' before CJK because the Latin part is from\n" +
+				"\t'Adobe Source Sans/Serif Pro'.-->\n" +
+				"<!--- 2. Don't prepend for Mono because its Latin part 'Adobe Source Code Pro'\n" +
+				"\tis openSUSE's choice for monospace font.\n" +
+				"<!--- 3. 'Noto Sans Mono CJK XX' is real font in openSUSE.-->\n\n"
+		}
+		config += notoGenConfigForSpecificGenericFontAndLang(v)
 	}
-	return str
+	return config
 }
 
-type NotoLFPL struct {
+//LFPL Language grouped family preference list
+type LFPL struct {
 	Lang      string
-	Sans      FPL
-	Serif     FPL
-	Monospace FPL
+	Sans      PAD
+	Serif     PAD
+	Monospace PAD
 }
 
-func NewNotoLFPL(lang string) NotoLFPL {
-	return NotoLFPL{lang, FPL{}, FPL{}, FPL{}}
+//NewLFPL initialie a new language grouped family preference list
+func NewLFPL(lang string) LFPL {
+	return LFPL{lang, PAD{}, PAD{}, PAD{}}
 }
 
-func (lfpl *NotoLFPL) AddFont(font, generic, list string) {
+func (lfpl *LFPL) AddFont(font, generic, list string) {
 	fv := reflect.ValueOf(lfpl).Elem()
 	v := fv.FieldByName(generic)
 
 	if v.IsValid() {
 		if v.NumField() == 0 {
-			v.Set(reflect.ValueOf(NewFPL(font, lfpl.Lang)))
+			v.Set(reflect.ValueOf(NewPAD(font, lfpl.Lang)))
 		} else {
 			v1 := v.FieldByName(list)
 			m := map[string][]string{"JP": {"ja"}, "KR": {"ko"},
@@ -87,17 +107,19 @@ func (lfpl *NotoLFPL) AddFont(font, generic, list string) {
 	}
 }
 
-type FPL struct {
+//PAD (P)repend/(A)ppend/(D)efault Family Preference List
+type PAD struct {
 	Prepend CandidateList
 	Append  CandidateList
 	Default CandidateList
 }
 
-func NewFPL(font, lang string) FPL {
-	defa := CandidateList{}
-	defa.Add(font, lang)
+//NewPAD initialize a new PAD
+func NewPAD(font, lang string) PAD {
+	l := CandidateList{}
+	l.Add(font, lang)
 
-	return FPL{CandidateList{}, CandidateList{}, defa}
+	return PAD{CandidateList{}, CandidateList{}, l}
 }
 
 //CandidateList Font Candidate List
@@ -134,10 +156,10 @@ func (l *CandidateList) Add(font, lang string) {
 }
 
 //Installed leave the installed font in CandidateList only
-func (m *CandidateList) Installed(c Collection) {
-	for _, v := range *m {
+func (l *CandidateList) Installed(c Collection) {
+	for _, v := range *l {
 		if len(c.FindByName(v)) == 0 {
-			slice.Remove(m, v)
+			slice.Remove(l, v)
 		}
 	}
 }
@@ -154,7 +176,7 @@ func GenNotoConfig(fonts Collection, userMode bool) {
 }
 
 func genNotoDefaultFamily(fonts Collection, userMode bool) string {
-	str := genConfigPreamble(userMode, "<!-- Default families for Noto Fonts installed on your system.-->")
+	str := genFcPreamble(userMode, "<!-- Default families for Noto Fonts installed on your system.-->")
 	// font names across different font.Name may be equal.
 	m := make(map[string]struct{})
 
@@ -167,13 +189,13 @@ func genNotoDefaultFamily(fonts Collection, userMode bool) string {
 		}
 	}
 
-	str += FontConfigSuffix
+	str += FcSuffix
 
 	return str
 }
 
 func genNotoConfig(fonts Collection, userMode bool) string {
-	lfpl := NotoLFPLs{}
+	lfpl := LFPLs{}
 
 	nonLangFonts := []string{"Noto Sans", "Noto Sans Disp", "Noto Sans Display",
 		"Noto Sans Mono", "Noto Sans Symbols", "Noto Sans Symbols2",
@@ -191,16 +213,14 @@ func genNotoConfig(fonts Collection, userMode bool) string {
 	}
 	completeCJK(&lfpl, fonts)
 
-	str := genConfigPreamble(userMode, "<!-- Language specific family preference list for Noto Fonts installed on your system.-->") +
-		lfpl.GenLFPL() +
-		FontConfigSuffix
-
-	return str
+	return genFcPreamble(userMode, "<!-- Language specific family preference list for Noto Fonts installed on your system.-->") +
+		lfpl.GenLFPLsConfig() +
+		FcSuffix
 }
 
-// genFPL generate family preference list of fonts for a generic font name
+// notoGenConfigForSpecificGenericFontAndLang generate family preference list of fonts for a generic font name
 // and a specific language
-func genFPL(lfpl NotoLFPL) string {
+func notoGenConfigForSpecificGenericFontAndLang(lfpl LFPL) string {
 	str := ""
 	for _, generic := range []string{"sans-serif", "serif", "monospace"} {
 		mark := generic
@@ -260,7 +280,7 @@ func getGenericFamily(name string) string {
 	return "sans"
 }
 
-func completeCJK(lfpl *NotoLFPLs, c Collection) {
+func completeCJK(lfpl *LFPLs, c Collection) {
 	for i, v := range *lfpl {
 		switch v.Lang {
 		case "zh-cn", "zh-sg":

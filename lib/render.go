@@ -80,8 +80,8 @@ func genRenderingOptions(opts Options, userMode bool) string {
 	if len(config) == 0 {
 		return config
 	}
-	return genConfigPreamble(userMode, "<!-- using target=\"pattern\", because we want to change pattern in 60-family-prefer.conf\n\tregarding to this setting -->\n") +
-		config + FontConfigSuffix
+	return genFcPreamble(userMode, "<!-- using target=\"pattern\", because we want to change pattern in 60-family-prefer.conf\n\tregarding to this setting -->\n") +
+		config + FcSuffix
 }
 
 // validStringOption return false if a string is "null", has suffix "none" or just empty.

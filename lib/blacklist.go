@@ -117,7 +117,7 @@ func GenEmojiBlacklist(fonts Collection, userMode bool, opts Options) {
 	}
 
 	if len(conf) > 0 {
-		emojiConf = genConfigPreamble(userMode, "") + conf + FontConfigSuffix
+		emojiConf = genFcPreamble(userMode, "") + conf + FcSuffix
 	}
 
 	blacklistFile := GetConfigLocation("blacklist", userMode)
