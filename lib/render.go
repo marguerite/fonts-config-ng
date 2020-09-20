@@ -7,17 +7,15 @@ import (
 )
 
 func genBitmapLanguagesConfig(opts Options) string {
+	tmp := "\t<match target=\"font\">\n"
+	tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"append\">\n"
 	if opts.UseEmbeddedBitmaps {
 		if opts.EmbeddedBitmapsLanguages == "no" || len(opts.EmbeddedBitmapsLanguages) == 0 {
-			tmp := "\t<match target=\"font\">\n"
-			tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"append\">\n"
 			tmp += "\t\t\t<b>true</bool>\n"
 			tmp += "\t\t</edit>\n"
 			tmp += "\t</match>\n"
 			return tmp
 		}
-		tmp := "\t<match target=\"font\">\n"
-		tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"append\">\n"
 		tmp += "\t\t\t<bool>false</bool>\n"
 		tmp += "\t\t</edit>\n"
 		tmp += "\t</match>\n"
@@ -29,8 +27,6 @@ func genBitmapLanguagesConfig(opts Options) string {
 		}
 		return tmp
 	}
-	tmp := "\t<match target=\"font\">\n"
-	tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"append\">\n"
 	tmp += "\t\t\t<bool>false</bool>\n"
 	tmp += "\t\t</edit>\n"
 	tmp += "\t</match>\n"
@@ -43,7 +39,7 @@ func GenRenderingOptions(userMode bool, opts Options) {
 	   # parameters in fontconfig setting to control rendering */
 	renderFile := GetConfigLocation("render", userMode)
 
-	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Generating %s.", renderFile))
+	Dbg(opts.Verbosity, Debug, fmt.Sprintf("Generating %s.", renderFile))
 	renderText := genRenderingOptions(opts, userMode)
 
 	err := overwriteOrRemoveFile(renderFile, []byte(renderText), 0644)
@@ -96,7 +92,7 @@ func genStringOptionConfig(verbosity int, opt, dbgOutput, comment, editName stri
 	if !validStringOption(opt) {
 		return ""
 	}
-	debug(verbosity, VerbosityDebug, fmt.Sprintf(dbgOutput+" %s", opt))
+	Dbg(verbosity, Debug, fmt.Sprintf(dbgOutput+" %s", opt))
 	config := comment
 	config += "\t<match target=\"pattern\" >\n\t\t<edit name=\""
 	config += editName
@@ -126,7 +122,7 @@ func genBoolOptionConfig(verbosity int, opt bool, dbgOutput, comment, editName s
 	if strings.HasPrefix(editName, "force") && !opt {
 		return ""
 	}
-	debug(verbosity, VerbosityDebug, fmt.Sprintf(dbgOutput+" %t", opt))
+	Dbg(verbosity, Debug, fmt.Sprintf(dbgOutput+" %t", opt))
 	config := comment
 	config += "\t<match target=\"pattern\">\n\t\t<edit name=\""
 	config += editName

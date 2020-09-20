@@ -37,7 +37,7 @@ func GenMetricCompatibility(verbosity int) {
 
 	text := mkMetricCompatibility(NewReader(avail))
 
-	debug(verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.\n", file))
+	Dbg(verbosity, Debug, fmt.Sprintf("Writing %s.\n", file))
 
 	err := overwriteOrRemoveFile(file, []byte(text), 0644)
 	if err != nil {

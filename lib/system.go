@@ -2,25 +2,26 @@ package lib
 
 import (
 	"fmt"
-	"github.com/marguerite/util/command"
 	"regexp"
 	"strings"
+
+	"github.com/marguerite/util/command"
 )
 
 // FcCache run fc-cache command on the running system
 func FcCache(verbosity int) {
 	if cmd, err := command.Search("/usr/bin/fc-cache"); err == nil {
-		debug(verbosity, VerbosityVerbose, "Creating fontconfig cache files.\n")
+		Dbg(verbosity, Verbose, "Creating fontconfig cache files.\n")
 
 		opts := ""
 
-		if verbosity >= VerbosityVerbose {
+		if verbosity >= Verbose {
 			opts = "--verbose"
 		}
 
 		_, status, _ := command.Run(cmd, opts)
 
-		debug(verbosity, VerbosityDebug, fmt.Sprintf("Exit status of fc-cache: %d\n", status))
+		Dbg(verbosity, Debug, fmt.Sprintf("Exit status of fc-cache: %d\n", status))
 	}
 }
 
@@ -29,14 +30,14 @@ func FpRehash(verbosity int) {
 	if cmd, err := command.Search("/usr/bin/xset"); err == nil {
 		re := regexp.MustCompile(`^:\d.*$`)
 		if re.MatchString(GetEnv("DISPLAY")) {
-			debug(verbosity, VerbosityVerbose, "Rereading the font databases in the current font path ...\n")
-			debug(verbosity, VerbosityDebug, "Running xset fp rehash\n")
+			Dbg(verbosity, Verbose, "Rereading the font databases in the current font path ...\n")
+			Dbg(verbosity, Debug, "Running xset fp rehash\n")
 
 			out, _, _ := command.Run(cmd, "fp", "rehash")
-			debug(verbosity, VerbosityDebug, string(out)+"\n")
+			Dbg(verbosity, Debug, string(out)+"\n")
 		} else {
-			debug(verbosity, VerbosityVerbose, "It is not a local display, do not reread X font databases for now.\n")
-			debug(verbosity, VerbosityDebug, "NOTE: do not run 'xset fp rehash', no local display detected.\n")
+			Dbg(verbosity, Verbose, "It is not a local display, do not reread X font databases for now.\n")
+			Dbg(verbosity, Debug, "NOTE: do not run 'xset fp rehash', no local display detected.\n")
 		}
 	}
 }
@@ -47,12 +48,12 @@ func ReloadXfsConfig(verbosity int) {
 		pid, _, _ := command.Run(cmd, "-C", "xfs", "-o", "pid=")
 		pid = strings.TrimSpace(pid)
 		if len(pid) != 0 {
-			debug(verbosity, VerbosityVerbose, fmt.Sprintf("Reloading config file of X Font Server %s ...\n", pid))
+			Dbg(verbosity, Verbose, fmt.Sprintf("Reloading config file of X Font Server %s ...\n", pid))
 			command.Run("/usr/bin/pkill", "-USR1", pid)
 		} else {
-			debug(verbosity, VerbosityDebug, "X Font Server not used.\n")
+			Dbg(verbosity, Debug, "X Font Server not used.\n")
 		}
 	} else {
-		debug(verbosity, VerbosityVerbose, "WARNING: ps command is missing, couldn't search for X Font Server pids.")
+		Dbg(verbosity, Verbose, "WARNING: ps command is missing, couldn't search for X Font Server pids.")
 	}
 }

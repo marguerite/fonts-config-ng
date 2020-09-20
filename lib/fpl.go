@@ -26,13 +26,12 @@ func buildFPL(genericName, preferredFamiliesInString string, userMode bool, opts
 		return ""
 	}
 
-	if opts.Verbosity >= VerbosityDebug {
-		if opts.ForceFamilyPreferenceLists {
-			fmt.Printf("Strongly preferred %s families: ", genericName)
-		} else {
-			fmt.Printf("Preferred %s families: ", genericName)
+	Dbg(opts.Verbosity, Debug, func(force bool) string {
+		if force {
+			return fmt.Sprintf("Strongly preferred %s families: ", genericName)
 		}
-	}
+		return fmt.Sprintf("Preferred %s families: ", genericName)
+	}, opts.ForceFamilyPreferenceLists)
 
 	if opts.ForceFamilyPreferenceLists {
 		fpl += "\t<match>\n" +
@@ -42,7 +41,7 @@ func buildFPL(genericName, preferredFamiliesInString string, userMode bool, opts
 		for _, font := range families {
 			font = fixFamilyName(font)
 			fpl += "\t\t\t<string>" + font + "</string>\n"
-			debug(opts.Verbosity, VerbosityDebug, "["+font+"]\n")
+			Dbg(opts.Verbosity, Debug, "["+font+"]\n")
 		}
 
 		fpl += "\t\t</edit>\n\t</match>\n"
@@ -56,7 +55,7 @@ func buildFPL(genericName, preferredFamiliesInString string, userMode bool, opts
 		for _, font := range families {
 			font = fixFamilyName(font)
 			fpl += "\t\t\t<family>" + font + "</family>\n"
-			debug(opts.Verbosity, VerbosityDebug, "["+font+"]\n")
+			Dbg(opts.Verbosity, Debug, "["+font+"]\n")
 		}
 		fpl += "\t\t</prefer>\n\t</alias>\n"
 	}
@@ -67,7 +66,7 @@ func buildFPL(genericName, preferredFamiliesInString string, userMode bool, opts
 // GenFamilyPreferenceLists generates fontconfig fpl conf with user's explicit choices
 func GenFamilyPreferenceLists(userMode bool, opts Options) {
 	fplFile := GetConfigLocation("fpl", userMode)
-	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Generating %s", fplFile))
+	Dbg(opts.Verbosity, Debug, fmt.Sprintf("Generating %s", fplFile))
 
 	fplText := genFcPreamble(userMode, "")
 
@@ -87,7 +86,7 @@ func GenFamilyPreferenceLists(userMode bool, opts Options) {
 	fplText += buildFPL("monospace", opts.PreferMonoFamilies, userMode, opts)
 	fplText += FcSuffix
 
-	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Writing %s.", fplFile))
+	Dbg(opts.Verbosity, Debug, fmt.Sprintf("Writing %s.", fplFile))
 
 	err := overwriteOrRemoveFile(fplFile, []byte(fplText), 0644)
 	if err != nil {

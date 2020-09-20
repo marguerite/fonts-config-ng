@@ -3,14 +3,15 @@ package lib
 import (
 	"bufio"
 	"fmt"
-	"github.com/marguerite/util/command"
-	"github.com/marguerite/util/fileutils"
-	"github.com/marguerite/util/slice"
 	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
+
+	"github.com/marguerite/util/command"
+	"github.com/marguerite/util/fileutils"
+	"github.com/marguerite/util/slice"
 )
 
 // FontCandidates a struct containing family preference list for a generic font name for a specific CJK language
@@ -141,7 +142,7 @@ func getInstalledFontNameAndPathFromList(lst FontCandidates, verbosity int) Java
 	}
 
 	if len(fontfile) == 0 {
-		debug(verbosity, VerbosityDebug, fmt.Sprintf(" warning: cannot find a %s %s font, %s might not work in Java.\n", lst.Lang, lst.GenericName, lst.Lang))
+		Dbg(verbosity, Debug, fmt.Sprintf(" warning: cannot find a %s %s font, %s might not work in Java.\n", lst.Lang, lst.GenericName, lst.Lang))
 		return JavaFontProperty{"", ""}
 	}
 	return JavaFontProperty{fontfile, getJavaXlfdByName(fontname)}
@@ -167,7 +168,7 @@ func overrideOrAppendJavaFont(f *JavaFonts, genericFont JavaFont) {
 
 // GenerateJavaFontSetup generates fontconfig properties conf for java
 func GenerateJavaFontSetup(verbosity int) error {
-	debug(verbosity, VerbosityVerbose, "generating java font setup ...\n")
+	Dbg(verbosity, Verbose, "generating java font setup ...\n")
 
 	template := "/usr/share/fonts-config/fontconfig.SUSE.properties.template"
 
@@ -198,13 +199,15 @@ func GenerateJavaFontSetup(verbosity int) error {
 	overrideOrAppendJavaFont(&fonts, JavaFont{"serif_latin1", getInstalledFontNameAndPathFromList(serifLatin1, verbosity)})
 	overrideOrAppendJavaFont(&fonts, JavaFont{"mono_latin1", getInstalledFontNameAndPathFromList(monoLatin1, verbosity)})
 
-	debugText := ""
-	for _, v := range fonts {
-		debugText += fmt.Sprintf("%s_file=%s\n", v.Name, v.Path)
-		debugText += fmt.Sprintf("%s_xlfd=%s\n", v.Name, v.XLFD)
-		debugText += fmt.Sprintf("%s_xlfd_no_space=%s\n", v.Name, substituteSpaceInJavaXLFD(v.XLFD))
-	}
-	debug(verbosity, VerbosityDebug, debugText)
+	Dbg(verbosity, Debug, func(javaFonts JavaFonts) string {
+		str := ""
+		for _, javaFont := range javaFonts {
+			str += fmt.Sprintf("%s_file=%s\n", javaFont.Name, javaFont.Path)
+			str += fmt.Sprintf("%s_xlfd=%s\n", javaFont.Name, javaFont.XLFD)
+			str += fmt.Sprintf("%s_xlfd_no_space=%s\n", javaFont.Name, substituteSpaceInJavaXLFD(javaFont.XLFD))
+		}
+		return str
+	}, fonts)
 
 	tmpl, err := os.Open(template)
 	if err != nil {
@@ -228,7 +231,7 @@ func GenerateJavaFontSetup(verbosity int) error {
 			m := xlfdRe.FindStringSubmatch(line)
 			font, ok := fonts.FindByName(strings.ToLower(m[1]))
 			if !ok {
-				debug(verbosity, VerbosityDebug, fmt.Sprintf("cannot find value for %s to replace.\n", m[0]))
+				Dbg(verbosity, Debug, fmt.Sprintf("cannot find value for %s to replace.\n", m[0]))
 				continue
 			}
 			if m[len(m)-1] == "NO_SPACE_" {
@@ -241,7 +244,7 @@ func GenerateJavaFontSetup(verbosity int) error {
 			m := fileRe.FindStringSubmatch(line)
 			font, ok := fonts.FindByName(strings.ToLower(m[1]))
 			if !ok {
-				debug(verbosity, VerbosityDebug, fmt.Sprintf("cannot find value for %s to replace.\n", m[0]))
+				Dbg(verbosity, Debug, fmt.Sprintf("cannot find value for %s to replace.\n", m[0]))
 				continue
 			}
 			line = strings.Replace(line, m[0], font.Path, -1)

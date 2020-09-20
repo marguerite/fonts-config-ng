@@ -51,7 +51,7 @@ func GenEmojiBlacklist(fonts Collection, userMode bool, opts Options) {
 	emojiCharset := genEmojiCharset(emojiFonts)
 	blacklist := Collection{}
 
-	debug(opts.Verbosity, VerbosityDebug, "Blacklisting glyphs from chosen emoji fonts in non-emoji fonts.")
+	Dbg(opts.Verbosity, Debug, "Blacklisting glyphs from chosen emoji fonts in non-emoji fonts.")
 
 	if len(emojiCharset) == 0 {
 		return
@@ -70,7 +70,7 @@ func GenEmojiBlacklist(fonts Collection, userMode bool, opts Options) {
 			in := f.Charset.Intersect(emojiCharset)
 
 			if len(in) > 0 {
-				debug(verbosity, VerbosityDebug, fmt.Sprintf("Calculating glyphs for %s\nIntersected charsets: %v", f.Name[0], in))
+				Dbg(verbosity, Debug, fmt.Sprintf("Calculating glyphs for %s\nIntersected charsets: %v", f.Name[0], in))
 				names := f.Name
 				if len(names) > 1 {
 					unstyled := f.UnstyledName()
@@ -122,7 +122,7 @@ func GenEmojiBlacklist(fonts Collection, userMode bool, opts Options) {
 
 	blacklistFile := GetConfigLocation("blacklist", userMode)
 
-	debug(opts.Verbosity, VerbosityDebug, fmt.Sprintf("Blacklist file location: %s", blacklistFile))
+	Dbg(opts.Verbosity, Debug, fmt.Sprintf("Blacklist file location: %s", blacklistFile))
 
 	err := overwriteOrRemoveFile(blacklistFile, []byte(emojiConf), 0644)
 

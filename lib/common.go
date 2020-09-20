@@ -2,28 +2,45 @@ package lib
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 )
 
-// VerbosityDebug an interger to control verbose output
-const VerbosityDebug int = 256
+// Debug echo debug level information to output
+const Debug int = 256
 
-// VerbosityVerbose an interger to control verbose output
-const VerbosityVerbose int = 1
+// Verbose echo verbose level information to output
+const Verbose int = 1
 
-// VerbosityQuiet an interger to control verbose output
-const VerbosityQuiet int = 0
+// Quiet echo nothing to output
+const Quiet int = 0
 
 // FcSuffix suffix for every fontconfig configuration file
 const FcSuffix string = "</fontconfig>\n"
 
-func debug(verbosity int, level int, text string) {
+// dbg if dbgLevel >= limit, return the dbgOut. dbgOut can be plain string or func to format debug information by yourself
+func Dbg(verbosity int, level int, dbgOut interface{}, parms ...interface{}) {
 	if verbosity >= level {
-		log.Println(text)
+		kd := reflect.TypeOf(dbgOut).Kind()
+		if kd == reflect.Func {
+			args := []reflect.Value{}
+			for _, parm := range parms {
+				args = append(args, reflect.ValueOf(parm))
+			}
+			out := reflect.ValueOf(dbgOut).Call(args)
+			// may have multiple returns
+			for _, o := range out {
+				fmt.Println(o)
+			}
+		}
+		if kd == reflect.String {
+			fmt.Println(dbgOut)
+		}
 	}
 }
 

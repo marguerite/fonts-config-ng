@@ -14,7 +14,6 @@ import (
 	"strings"
 	"sync"
 
-	dirutils "github.com/marguerite/util/dir"
 	"github.com/marguerite/util/fileutils"
 	"github.com/marguerite/util/slice"
 )
@@ -396,20 +395,20 @@ func LoadFonts(c Collection) Collection {
 	// Existing collection
 	pathsExisting := c.GetFontPaths()
 	// Installed Fonts
-	fontsInstalled := GetFontsInstalled()
+	installed := GetInstalledFonts()
 
-	tmp := fontsInstalled
+	tmp := installed
 	slice.Intersect(&tmp, pathsExisting)
 
 	// Get those not in pathsExisting
-	slice.Remove(&fontsInstalled, tmp)
+	slice.Remove(&installed, tmp)
 
 	wg := sync.WaitGroup{}
-	wg.Add(len(fontsInstalled))
+	wg.Add(len(installed))
 	mux := sync.Mutex{}
 	ch := make(chan struct{}, 100) // ch is a chan to avoid "too many open files" when os exec
 
-	for _, font := range fontsInstalled {
+	for _, font := range installed {
 		log.Printf("Parsing %s...", font)
 		go func(path string) {
 			defer wg.Done()
@@ -459,7 +458,7 @@ func restrictPath(path string, restricts ...interface{}) (string, error) {
 
 	_, ok := restricts[0].(*regexp.Regexp)
 	if reflect.ValueOf(restricts[0]).Kind() != reflect.String && !ok {
-		return "", fmt.Errorf("Restrict term must be of type 'string' or '*regexp.Regexp'.")
+		return "", fmt.Errorf("restrict term must be of type 'string' or '*regexp.Regexp'")
 	}
 
 	base := filepath.Base(path)
@@ -478,18 +477,36 @@ func restrictPath(path string, restricts ...interface{}) (string, error) {
 	return "", fmt.Errorf("no matched path found")
 }
 
-//GetFontsInstalled Get all font files installed on your system
-func GetFontsInstalled() []string {
-	local := filepath.Join(GetEnv("HOME"), ".fonts")
-	candidates := []string{}
-
-	for _, dir := range []string{local, "/usr/share/fonts"} {
-		fonts, _ := dirutils.Ls(dir)
-		for _, font := range fonts {
-			if fileutils.HasPrefixOrSuffix(filepath.Base(font), "font", ".", ".dir", ".afm", ".gz", ".rpmsave") == 0 {
-				candidates = append(candidates, font)
-			}
-		}
+//GetInstalledFonts Get all font files installed on your system
+func GetInstalledFonts() []string {
+	out, err := exec.Command("/usr/bin/fc-list").Output()
+	if err != nil {
+		log.Fatal("no fc-list found")
 	}
-	return candidates
+
+	tmp := []byte{}
+	fonts := []string{}
+	first := true
+
+	for _, b := range out {
+		if b == ':' {
+			if first {
+				font := string(tmp)
+				if fileutils.HasPrefixOrSuffix(font, ".pcf.gz", ".pfa", ".pfb", ".afm") == 0 {
+					fonts = append(fonts, font)
+				}
+			}
+			tmp = []byte{}
+			first = false
+			continue
+		}
+		if b == '\n' {
+			tmp = []byte{}
+			first = true
+			continue
+		}
+		tmp = append(tmp, b)
+	}
+	slice.Unique(&fonts)
+	return fonts
 }

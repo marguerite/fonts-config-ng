@@ -88,7 +88,7 @@ func cliFlagsRltPos(c *cli.Context) []int {
 
 // verbosityLevel decide the verbosity level
 func verbosityLevel(quiet, verbose, debug bool) int {
-	m := map[bool]int{quiet: lib.VerbosityQuiet, verbose: lib.VerbosityVerbose, debug: lib.VerbosityDebug}
+	m := map[bool]int{quiet: lib.Quiet, verbose: lib.Verbose, debug: lib.Debug}
 	for k, v := range m {
 		if k {
 			return v
@@ -112,16 +112,16 @@ func getUserPrefix(userMode bool, verbosity int) string {
 func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
 	sys := lib.NewReader(lib.GetConfigLocation("fc", false))
 	config := lib.LoadOptions(sys, lib.NewOptions())
-	log.Printf("System Configuration: %s", config.Bounce())
+	lib.Dbg(opt.Verbosity, lib.Debug, fmt.Sprintf("System Configuration: %s", config.Bounce()))
 
 	if userMode {
 		user := lib.NewReader(lib.GetConfigLocation("fc", true))
 		config = lib.LoadOptions(user, config)
-		log.Printf("With user configuration prepended: %s", config.Bounce())
+		lib.Dbg(config.Verbosity, lib.Debug, fmt.Sprintf("With user configuration prepended:\n %s", config.Bounce()))
 	}
 
 	config.Merge(opt, cliFlagsRltPos(c))
-	log.Printf("With command line configuration prepended: %s", config.Bounce())
+	lib.Dbg(config.Verbosity, lib.Debug, fmt.Sprintf("With command line configuration prepended:\n %s", config.Bounce()))
 
 	writeOptions(config, userMode)
 
@@ -288,6 +288,7 @@ func main() {
 
 		// parse verbosity
 		verbosity := verbosityLevel(quiet, verbose, debug)
+		fmt.Println(verbosity)
 		userPrefix := getUserPrefix(userMode, verbosity)
 
 		if remove {
@@ -303,26 +304,26 @@ func main() {
 			emojis, preferredSans, preferredSerif,
 			preferredMono, metric, forceFPL, ttcap, enableJava}
 
-		log.Printf("Command line options: %s", options.Bounce())
+		lib.Dbg(verbosity, lib.Debug, fmt.Sprintf("Command line options: %s", options.Bounce()))
 
 		config := loadOptions(options, c, userMode)
 
-		if verbosity >= lib.VerbosityDebug {
-			if userMode {
-				log.Printf("USER mode (%s)\n", lib.GetEnv("USER"))
+		lib.Dbg(verbosity, lib.Debug, func(mode bool) string {
+			info := ""
+			if mode {
+				info += fmt.Sprintf("--- USER mode (%s)\n", lib.GetEnv("USER"))
 			} else {
-				log.Println("SYSTEM mode")
+				info += fmt.Sprintf("--- SYSTEM mode")
 			}
 
-			text := "Sysconfig options (read from /etc/sysconfig/fonts-config"
-			if userMode {
-				text += fmt.Sprintf(", %s)\n", lib.GetConfigLocation("fc", userMode))
+			info += "\tsysconfig options (read from /etc/sysconfig/fonts-config"
+			if mode {
+				info += fmt.Sprintf(", %s)\n", lib.GetConfigLocation("fc", mode))
 			} else {
-				text += ")\n"
+				info += ")\n"
 			}
-			log.Println(text)
-			log.Println(config.Bounce())
-		}
+			return info
+		}, userMode)
 
 		if !userMode {
 			err := lib.MkFontScaleDir(config, force)
