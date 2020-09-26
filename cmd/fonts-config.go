@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -336,22 +335,13 @@ func main() {
 			# changed in /etc/fonts after calling fc-cache, fontconfig
 			# will think that the cache files are out of date again. */
 
-		collection := lib.Collection{}
-		cache := lib.GetCacheLocation(userMode)
-		if _, err := os.Stat(cache); !os.IsNotExist(err) {
-			collection.Decode(lib.NewReader(cache).Bytes())
-		}
-		collection = lib.LoadFonts(collection)
-
+		collection := lib.NewCollection()
 		lib.GenTTType(collection, userMode)
 		lib.GenRenderingOptions(userMode, config)
 		lib.GenFamilyPreferenceLists(userMode, config)
 		lib.GenEmojiBlacklist(collection, userMode, config)
 		lib.GenNotoConfig(collection, userMode)
 		lib.GenCJKConfig(collection, userMode)
-
-		b, _ := collection.Encode()
-		ioutil.WriteFile(cache, b, 0644)
 
 		if !userMode {
 			lib.FcCache(config.Verbosity)

@@ -166,7 +166,7 @@ func (l *CandidateList) Installed(c Collection) {
 
 //GenNotoConfig generate fontconfig for Noto Fonts
 func GenNotoConfig(fonts Collection, userMode bool) {
-	fonts = fonts.FindByPath("Noto")
+	fonts = fonts.FindByName("Noto")
 	family := genNotoDefaultFamily(fonts, userMode)
 	lfpl := genNotoConfig(fonts, userMode)
 	faPos := GetConfigLocation("notoDefault", userMode)
@@ -197,17 +197,15 @@ func genNotoDefaultFamily(fonts Collection, userMode bool) string {
 func genNotoConfig(fonts Collection, userMode bool) string {
 	lfpl := LFPLs{}
 
-	nonLangFonts := []string{"Noto Sans", "Noto Sans Disp", "Noto Sans Display",
+	nonLangFonts := []string{"Noto Sans", "Noto Sans Display",
 		"Noto Sans Mono", "Noto Sans Symbols", "Noto Sans Symbols2",
-		"Noto Serif", "Noto Serif Disp", "Noto Serif Display",
+		"Noto Serif", "Noto Serif Display",
 		"Noto Mono", "Noto Emoji", "Noto Color Emoji"}
 
 	for _, font := range fonts {
-		if b, err := slice.Contains(font.Name, nonLangFonts); !b && err == nil && len(font.Lang) > 0 {
+		if b, err := slice.Contains(font.Name, nonLangFonts); !b && err == nil {
 			for _, lang := range font.Lang {
-				for _, name := range font.UnstyledName() {
-					lfpl.AddFont(lang, name, strings.Title(getGenericFamily(name)), "Default")
-				}
+				lfpl.AddFont(lang, font.Name[0], strings.Title(getGenericFamily(font.Name[0])), "Default")
 			}
 		}
 	}

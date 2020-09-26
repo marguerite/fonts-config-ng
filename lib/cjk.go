@@ -19,6 +19,26 @@ func GenCJKConfig(availFonts Collection, userMode bool) {
 	overwriteOrRemoveFile(conf, []byte(text), 0644)
 }
 
+//isSpacingDual find spacing=dual/mono/charcell
+func isSpacingDual(font Font) int {
+	if font.Spacing > 90 && !font.Outline {
+		return 1
+	}
+	if font.Spacing == 90 {
+		return 0
+	}
+	return -1
+}
+
+//isCJKFont find if a font supports CJK
+func isCJKFont(font Font) bool {
+	supportedLangs := []string{"zh", "ja", "ko", "zh-cn", "zh-tw", "zh-hk", "zh-mo", "zh-sg"}
+	if ok, err := slice.Contains(font.Lang, supportedLangs); ok && err == nil {
+		return true
+	}
+	return false
+}
+
 //fixDualAsianFonts fix rendering of dual-width Asian fonts (spacing=dual)
 func fixDualAsianFonts(availFonts Collection, userMode bool) string {
 	comment := "<!-- The dual-width Asian fonts (spacing=dual) are not rendered correctly," +
@@ -29,7 +49,7 @@ func fixDualAsianFonts(availFonts Collection, userMode bool) string {
 	text := ""
 
 	for _, font := range availFonts {
-		if font.Dual >= 0 && font.CJK[0] != "none" {
+		if isSpacingDual(font) >= 0 && isCJKFont(font) {
 			text += genDualAisanConfig(font)
 		}
 	}

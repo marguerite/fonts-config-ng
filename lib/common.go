@@ -63,14 +63,6 @@ func ErrChk(e error) {
 	}
 }
 
-//GetCacheLocation return fonts-config cache location
-func GetCacheLocation(userMode bool) string {
-	if userMode {
-		return filepath.Join(GetEnv("HOME"), ".config/fontconfig/fonts-config.json")
-	}
-	return "/var/tmp/fonts-config.json"
-}
-
 // location system locations
 type location struct {
 	System string

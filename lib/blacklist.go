@@ -9,14 +9,14 @@ import (
 	"github.com/marguerite/util/slice"
 )
 
-func getEmojiFontsByName(fonts Collection, emoji string) Collection {
-	c := Collection{}
+func getEmojiFontsByName(c Collection, emojiFonts string) Collection {
+	c1 := Collection{}
 	// Prepare restricts
-	for _, v := range strings.Split(emoji, ":") {
-		tmp := fonts.FindByName(v)
-		slice.Concat(&c, tmp)
+	for _, font := range strings.Split(emojiFonts, ":") {
+		tmp := c.FindByName(font)
+		slice.Concat(&c1, tmp)
 	}
-	return c
+	return c1
 }
 
 //genEmojiCharset generate charset array of a emoji font
@@ -43,9 +43,9 @@ func genEmojiCharset(fonts Collection) Charset {
 }
 
 // GenEmojiBlacklist generate 81-emoji-blacklist-glyphs.conf
-func GenEmojiBlacklist(fonts Collection, userMode bool, opts Options) {
-	allEmojiFonts := fonts.FindByName("Emoji")
-	nonEmojiFonts := fonts
+func GenEmojiBlacklist(c Collection, userMode bool, opts Options) {
+	allEmojiFonts := c.FindByName("Emoji")
+	nonEmojiFonts := c
 	slice.Remove(&nonEmojiFonts, allEmojiFonts)
 	emojiFonts := getEmojiFontsByName(allEmojiFonts, opts.SystemEmojis)
 	emojiCharset := genEmojiCharset(emojiFonts)
@@ -71,22 +71,8 @@ func GenEmojiBlacklist(fonts Collection, userMode bool, opts Options) {
 
 			if len(in) > 0 {
 				Dbg(verbosity, Debug, fmt.Sprintf("Calculating glyphs for %s\nIntersected charsets: %v", f.Name[0], in))
-				names := f.Name
-				if len(names) > 1 {
-					unstyled := f.UnstyledName()
-
-					for _, u := range unstyled {
-						newF := f
-						newF.SetName([]string{u})
-						newF.SetCharset(in)
-						mux.Lock()
-						blacklist.AppendCharsetOrFont(newF)
-						mux.Unlock()
-					}
-
-					slice.Remove(&names, unstyled)
-
-					for _, name := range names {
+				if len(f.Name) > 1 {
+					for _, name := range f.Name[1:] {
 						newF := f
 						newF.SetName([]string{name})
 						newF.SetStyle(100, 80, 0)
