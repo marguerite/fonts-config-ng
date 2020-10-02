@@ -141,7 +141,7 @@ func writeOptions(opt lib.Options, userMode bool) {
 }
 
 func main() {
-	var userMode, remove, force, ttcap, enableJava, quiet, verbose, debug, autohint, bw, bwMono, ebitmaps, info, metric, forceFPL bool
+	var userMode, remove, force, ttcap, enableJava, quiet, verbose, debug, autohint, bw, bwMono, ebitmaps, info, metric, forceFPL, nextUpdate bool
 	var hintstyle, lcdfilter, rgba, ebitmapsLang, preferredSans, preferredSerif, preferredMono string
 
 	cli.VersionFlag = cli.BoolFlag{
@@ -296,7 +296,7 @@ func main() {
 		options := lib.Options{verbosity, hintstyle, autohint, bw, bwMono,
 			lcdfilter, rgba, ebitmaps, ebitmapsLang,
 			preferredSans, preferredSerif,
-			preferredMono, metric, forceFPL, ttcap, enableJava}
+			preferredMono, metric, forceFPL, ttcap, enableJava, nextUpdate}
 
 		lib.Dbg(verbosity, lib.Debug, fmt.Sprintf("Command line options: %s", options.Bounce()))
 

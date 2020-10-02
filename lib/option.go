@@ -15,22 +15,23 @@ import (
 
 // Options our fonts-config program's inner options, controls the generated fontconfig conf
 type Options struct {
-	Verbosity                  int
-	ForceHintstyle             string
-	ForceAutohint              bool
-	ForceBw                    bool
-	ForceBwMonospace           bool
-	UseLcdfilter               string
-	UseRgba                    string
-	UseEmbeddedBitmaps         bool
-	EmbeddedBitmapsLanguages   string
-	PreferSansFamilies         string
-	PreferSerifFamilies        string
-	PreferMonoFamilies         string
-	SearchMetricCompatible     bool
-	ForceFamilyPreferenceLists bool
-	GenerateTtcapEntries       bool
-	GenerateJavaFontSetup      bool
+	Verbosity                                  int
+	ForceHintstyle                             string
+	ForceAutohint                              bool
+	ForceBw                                    bool
+	ForceBwMonospace                           bool
+	UseLcdfilter                               string
+	UseRgba                                    string
+	UseEmbeddedBitmaps                         bool
+	EmbeddedBitmapsLanguages                   string
+	PreferSansFamilies                         string
+	PreferSerifFamilies                        string
+	PreferMonoFamilies                         string
+	SearchMetricCompatible                     bool
+	ForceFamilyPreferenceLists                 bool
+	GenerateTtcapEntries                       bool
+	GenerateJavaFontSetup                      bool
+	ForceModifyDefaultFontSettingsInNextUpdate bool
 }
 
 // FindByName find an option's value through its name
@@ -155,7 +156,7 @@ func parseBool(b bool) string {
 func NewOptions() Options {
 	return Options{0, "", false, false, false, "", "", false,
 		"", "", "", "", false, false,
-		false, false}
+		false, false, false}
 }
 
 func optionNameFromSysconfig(s string) string {

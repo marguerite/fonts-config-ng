@@ -8,7 +8,7 @@ import (
 
 var opt = Options{0, "", false, false, false, "", "", false,
 	"", "", "", "", false, false,
-	false, false}
+	false, false, false}
 
 func TestNewOptions(t *testing.T) {
 	got := NewOptions()
