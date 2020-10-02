@@ -2,6 +2,7 @@ package lib
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -29,7 +30,8 @@ func FcCache(verbosity int) {
 func FpRehash(verbosity int) {
 	if cmd, err := command.Search("/usr/bin/xset"); err == nil {
 		re := regexp.MustCompile(`^:\d.*$`)
-		if re.MatchString(GetEnv("DISPLAY")) {
+		disp := os.Getenv("DISPLAY")
+		if len(disp) > 0 && re.MatchString(disp) {
 			Dbg(verbosity, Verbose, "Rereading the font databases in the current font path ...\n")
 			Dbg(verbosity, Debug, "Running xset fp rehash\n")
 

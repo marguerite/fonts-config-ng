@@ -44,18 +44,6 @@ func Dbg(verbosity int, level int, dbgOut interface{}, parms ...interface{}) {
 	}
 }
 
-// GetEnv get system environment variable
-func GetEnv(env string) string {
-	val, ok := os.LookupEnv(env)
-	if !ok {
-		log.Fatalf("Environment Variable %s not set.\n", env)
-	}
-	if len(val) == 0 {
-		log.Fatalf("Environment Variable %s is empty.\n", env)
-	}
-	return val
-}
-
 // ErrChk panic at error
 func ErrChk(e error) {
 	if e != nil {
@@ -84,7 +72,7 @@ func GetConfigLocation(c string, userMode bool) string {
 	}
 
 	if userMode {
-		return filepath.Join(GetEnv("HOME"), ".config/fontconfig/"+m[c].User)
+		return filepath.Join(os.Getenv("HOME"), ".config/fontconfig/"+m[c].User)
 	}
 
 	prefix := "/etc/sysconfig"

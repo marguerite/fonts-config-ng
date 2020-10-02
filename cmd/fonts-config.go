@@ -11,7 +11,6 @@ import (
 	"strings"
 	"unsafe"
 
-	dirutils "github.com/marguerite/util/dir"
 	"github.com/marguerite/util/slice"
 	"github.com/openSUSE/fonts-config/lib"
 	"github.com/urfave/cli"
@@ -100,11 +99,7 @@ func getUserPrefix(userMode bool, verbosity int) string {
 	if !userMode {
 		return ""
 	}
-	prefix := filepath.Join(lib.GetEnv("HOME"), ".config/fontconfig")
-	err := dirutils.MkdirP(prefix)
-	if err != nil {
-		log.Fatalf("Can not create %s: %s\n", prefix, err.Error())
-	}
+	prefix := filepath.Join(os.Getenv("HOME"), ".config/fontconfig")
 	return prefix
 }
 
@@ -282,11 +277,9 @@ func main() {
 
 		// parse verbosity
 		verbosity := verbosityLevel(quiet, verbose, debug)
-		fmt.Println(verbosity)
-		userPrefix := getUserPrefix(userMode, verbosity)
 
 		if remove {
-			err := removeUserSetting(userPrefix)
+			err := removeUserSetting(getUserPrefix(userMode, verbosity))
 			if err != nil {
 				log.Fatalf("Can not remove configuration file: %s", err.Error())
 			}
@@ -305,7 +298,7 @@ func main() {
 		lib.Dbg(verbosity, lib.Debug, func(mode bool) string {
 			info := ""
 			if mode {
-				info += fmt.Sprintf("--- USER mode (%s)\n", lib.GetEnv("USER"))
+				info += fmt.Sprintf("--- USER mode (%s)\n", os.Getenv("USER"))
 			} else {
 				info += fmt.Sprintf("--- SYSTEM mode")
 			}
