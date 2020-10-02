@@ -3,7 +3,6 @@ package lib
 import (
 	"log"
 	"strconv"
-	"strings"
 )
 
 // genFcPreamble generate fontconfig preamble
@@ -33,40 +32,22 @@ func genFontTypeByHinting(name string, hinting bool) string {
 	return config
 }
 
-func genBlacklistConfig(f Font) string {
-	config := "\t<match target=\"scan\">\n\t\t<test name=\"family\">\n\t\t\t<string>" + f.Name[0] + "</string>\n\t\t</test>\n"
-	if !(f.Width == 0 && f.Weight == 0 && f.Slant == 0) {
-		if f.Width != 100 {
-			config += "\t\t<test name=\"width\">\n\t\t\t<int>" + strconv.Itoa(f.Width) + "</int>\n\t\t</test>\n"
-		}
-		if f.Weight != 80 {
-			config += "\t\t<test name=\"weight\">\n\t\t\t<int>" + strconv.Itoa(f.Weight) + "</int>\n\t\t</test>\n"
-		}
-		if f.Slant != 0 {
-			config += "\t\t<test name=\"slant\">\n\t\t\t<int>" + strconv.Itoa(f.Slant) + "</int>\n\t\t</test>\n"
-		}
-	}
+func genBlacklistConfig(b Blacklist) string {
+	config := "\t<match target=\"scan\">\n\t\t<test name=\"family\">\n\t\t\t<string>" + b.Name + "</string>\n\t\t</test>\n"
 	config += "\t\t<edit name=\"charset\" mode=\"assign\">\n\t\t\t<minus>\n\t\t\t\t<name>charset</name>\n"
-	config += genCharsetConfig(f.Charset)
-	config += "\t\t\t</minus>\n\t\t</edit>\n\t</match>\n\n"
-	return config
-}
-
-// genCharsetConfig convert Charset to fontconfig conf
-func genCharsetConfig(c Charset) string {
-	config := "\t\t\t\t<charset>\n"
-	for _, v := range c {
-		if strings.Contains(v, "..") {
+	for _, v := range b.Charset {
+		config += "\t\t\t\t<charset>\n"
+		if v.Min != v.Max {
 			config += "\t\t\t\t\t<range>\n"
-			for _, s := range strings.Split(v, "..") {
-				config += "\t\t\t\t\t\t<int>0x" + s + "</int>\n"
-			}
+			config += "\t\t\t\t\t\t<int>0x" + strconv.FormatUint(v.Min, 16) + "</int>\n"
+			config += "\t\t\t\t\t\t<int>0x" + strconv.FormatUint(v.Max, 16) + "</int>\n"
 			config += "\t\t\t\t\t</range>\n"
 		} else {
-			config += "\t\t\t\t\t<int>0x" + v + "</int>\n"
+			config += "\t\t\t\t\t<int>0x" + strconv.FormatUint(v.Min, 16) + "</int>\n"
 		}
+		config += "\t\t\t\t</charset>\n"
 	}
-	config += "\t\t\t\t</charset>\n"
+	config += "\t\t\t</minus>\n\t\t</edit>\n\t</match>\n\n"
 	return config
 }
 

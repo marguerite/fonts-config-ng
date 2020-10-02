@@ -48,7 +48,7 @@ func NewCollection() Collection {
 	return fonts
 }
 
-//FindByName Find Fonts by name restricts
+// FindByName Find Fonts by font name string or font name regexp pattern
 func (c Collection) FindByName(restricts ...interface{}) Collection {
 	newC := Collection{}
 	for _, font := range c {
@@ -59,22 +59,14 @@ func (c Collection) FindByName(restricts ...interface{}) Collection {
 	return newC
 }
 
-func (c *Collection) AppendCharsetOrFont(f Font) {
-	if i, ok := c.Find(f); ok {
-		(*c)[i].AppendCharset(f.Charset)
-	} else {
-		*c = append(*c, f)
-	}
-}
-
-//Find whether font collection contains a specific font and return its index
-func (c Collection) Find(f Font) (int, bool) {
-	for i, j := range c {
-		if j.File == j.File {
-			return i, true
+// FilterNameList given a list of font names, leave those in the collection in list
+// usually used to avoid useless fontconfig rules or trash in FC_DEBUG
+func (c Collection) FilterNameList(list *[]string) {
+	for _, name := range *list {
+		if len(c.FindByName(name)) == 0 {
+			slice.Remove(list, name)
 		}
 	}
-	return 0, false
 }
 
 //Font font struct with informations we need
@@ -129,28 +121,12 @@ func NewFont(font *Font, in string) {
 	}
 }
 
-//SetName set font name
-func (f *Font) SetName(name []string) {
-	f.Name = name
-}
-
-//SetStyle set font style
-func (f *Font) SetStyle(width, weight, slant int) {
-	f.Width = width
-	f.Weight = weight
-	f.Slant = slant
-}
-
-//SetCharset set font charsets
-func (f *Font) SetCharset(charset Charset) {
-	f.Charset = charset
-}
-
-//AppendCharset append charset to an existing Font
-func (f *Font) AppendCharset(c Charset) {
-	c1 := f.Charset
-	slice.Concat(&c1, c)
-	f.Charset = c1
+// IsEmoji whether a font is a emoji font
+func (f Font) IsEmoji() bool {
+	if ok, err := slice.Contains(f.Lang, "und-zsye"); ok && err == nil {
+		return true
+	}
+	return false
 }
 
 func getMatchedFontName(names []string, restricts ...interface{}) ([]string, error) {

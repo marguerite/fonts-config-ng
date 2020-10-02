@@ -3,116 +3,108 @@ package lib
 import (
 	"fmt"
 	"log"
-	"strings"
 	"sync"
-
-	"github.com/marguerite/util/slice"
 )
 
-func getEmojiFontsByName(c Collection, emojiFonts string) Collection {
+// getEmojiFonts get all system emoji fonts
+func getEmojiFonts(c Collection) Collection {
 	c1 := Collection{}
-	// Prepare restricts
-	for _, font := range strings.Split(emojiFonts, ":") {
-		tmp := c.FindByName(font)
-		slice.Concat(&c1, tmp)
+	for _, font := range c {
+		if font.IsEmoji() {
+			c1 = append(c1, font)
+		}
 	}
 	return c1
 }
 
-//genEmojiCharset generate charset array of a emoji font
-func genEmojiCharset(fonts Collection) Charset {
-	charset := Charset{}
-
-	for _, font := range fonts {
-		slice.Concat(&charset, font.Charset)
-	}
-
-	slice.Unique(&charset)
-
-	/* common emojis that almost every font has
-	   "#","*","0","1","2","3","4","5","6","7","8","9","©","®","™"," ",
-	   "‼","↔","↕","↖","↗","↘","↙","▪","▫","☀","⁉","ℹ",
-	   "▶","◀","☑","↩","↪","➡","⬅","⬆","⬇","♀","♂" */
-	emojis := Charset{"0", "20", "23", "2a", "30", "31", "32", "33", "34", "35", "36", "37",
-		"38", "39", "a9", "ae", "200d", "203c", "2049", "20e3", "2122",
-		"2139", "2194", "2195", "2196", "2197", "2198", "2199", "21a9",
-		"21aa", "25aa", "25ab", "25b6", "25c0", "2600", "2611", "2640",
-		"2642", "27a1", "2b05", "2b06", "2b07"}
-	slice.Remove(&charset, emojis)
-	return charset
+// Blacklist the font name and blacklisted charset
+type Blacklist struct {
+	Name string
+	Charset
 }
 
 // GenEmojiBlacklist generate 81-emoji-blacklist-glyphs.conf
+// 1. blacklist charsets < 200d in emoji fonts, they are everywhere and non-emoji
+// 2. balcklist emoji unicode codepoints in other fonts
 func GenEmojiBlacklist(c Collection, userMode bool, opts Options) {
-	allEmojiFonts := c.FindByName("Emoji")
-	nonEmojiFonts := c
-	slice.Remove(&nonEmojiFonts, allEmojiFonts)
-	emojiFonts := getEmojiFontsByName(allEmojiFonts, opts.SystemEmojis)
-	emojiCharset := genEmojiCharset(emojiFonts)
-	blacklist := Collection{}
+	emojis := getEmojiFonts(c)
 
-	Dbg(opts.Verbosity, Debug, "Blacklisting glyphs from chosen emoji fonts in non-emoji fonts.")
-
-	if len(emojiCharset) == 0 {
+	// no emoji fonts on the system
+	if len(emojis) == 0 {
 		return
 	}
 
+	Dbg(opts.Verbosity, Debug, "blacklisting charsets < 200d in emoji fonts")
+
+	var emojiConf, nonEmojiConf string
+	var charset Charset
+
+	for _, font := range emojis {
+		c := Charset{}
+		c1 := Charset{}
+
+		// select CharsetRange < 200d
+		for _, v := range font.Charset {
+			if v.Max < 8205 {
+				c.Append(v)
+			} else {
+				c1.Append(v)
+			}
+		}
+
+		charset = charset.Union(c1)
+
+		// black'em
+		if len(c) > 0 {
+			b := Blacklist{}
+			b.Name = font.Name[0]
+			if len(font.Name) > 1 {
+				b.Name = font.Name[len(font.Name)-1]
+			}
+			b.Charset = c
+			emojiConf += genBlacklistConfig(b)
+		}
+	}
+
+	Dbg(opts.Verbosity, Debug, "blacklisting emoji glyphs from non-emoji fonts")
+
 	wg := sync.WaitGroup{}
-	wg.Add(len(nonEmojiFonts))
+	wg.Add(len(c) - len(emojis))
 	mux := sync.Mutex{}
 	ch := make(chan struct{}, 100) // ch is a chan to avoid "too many open files" when os exec
 
-	for _, font := range nonEmojiFonts {
-		go func(f Font, verbosity int) {
-			defer wg.Done()
-			defer func() { <-ch }() // release chan
-			ch <- struct{}{}        // acquire chan
-			in := f.Charset.Intersect(emojiCharset)
+	for _, font := range c {
+		if !font.IsEmoji() {
+			go func(f Font, verbosity int) {
+				defer wg.Done()
+				defer func() { <-ch }() // release chan
+				ch <- struct{}{}        // acquire chan
+				in := f.Charset.Intersect(charset)
 
-			if len(in) > 0 {
-				Dbg(verbosity, Debug, fmt.Sprintf("Calculating glyphs for %s\nIntersected charsets: %v", f.Name[0], in))
-				if len(f.Name) > 1 {
-					for _, name := range f.Name[1:] {
-						newF := f
-						newF.SetName([]string{name})
-						newF.SetStyle(100, 80, 0)
-						newF.SetCharset(in)
-						mux.Lock()
-						blacklist.AppendCharsetOrFont(newF)
-						mux.Unlock()
+				if len(in) > 0 {
+					b := Blacklist{}
+					b.Charset = in
+					b.Name = f.Name[0]
+					if len(f.Name) > 1 {
+						b.Name = f.Name[len(f.Name)-1]
 					}
-				} else {
-					newF := f
-					newF.SetCharset(in)
-					newF.SetStyle(100, 80, 0)
+
+					Dbg(verbosity, Debug, fmt.Sprintf("Processing font %s with intersected charset: %s", b.Name, b.Charset.String()))
 					mux.Lock()
-					blacklist.AppendCharsetOrFont(newF)
+					nonEmojiConf += genBlacklistConfig(b)
 					mux.Unlock()
 				}
-			}
-		}(font, opts.Verbosity)
+			}(font, opts.Verbosity)
+		}
 	}
 
 	wg.Wait()
 
-	conf := ""
-	emojiConf := ""
-
-	for _, f := range blacklist {
-		conf += genBlacklistConfig(f)
-	}
-
-	if len(conf) > 0 {
-		emojiConf = genFcPreamble(userMode, "") + conf + FcSuffix
-	}
-
-	blacklistFile := GetConfigLocation("blacklist", userMode)
-
-	Dbg(opts.Verbosity, Debug, fmt.Sprintf("Blacklist file location: %s", blacklistFile))
-
-	err := overwriteOrRemoveFile(blacklistFile, []byte(emojiConf), 0644)
+	conf := genFcPreamble(userMode, "") + emojiConf + nonEmojiConf + FcSuffix
+	blacklist := GetConfigLocation("blacklist", userMode)
+	err := overwriteOrRemoveFile(blacklist, []byte(conf), 0644)
 
 	if err != nil {
-		log.Fatalf("Can not write %s: %s\n", blacklistFile, err.Error())
+		log.Fatalf("Can not write %s: %s\n", blacklist, err.Error())
 	}
 }

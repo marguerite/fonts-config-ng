@@ -238,14 +238,3 @@ GENERATE_TTCAP_ENTRIES="yes"
 # generate font setup for Java 1.4.x and Java 1.5.x
 #
 GENERATE_JAVA_FONT_SETUP="yes"
-
-## Path:        Desktop
-## Description: Display font configuration
-## Type:        string
-## Default:     "Noto Color Emoji"
-## Command:     /usr/sbin/fonts-config
-#
-# Colon-separated list of Emoji fonts to be used globally.
-# Glyphs from these emojis will be blacklisted for other non-emoji fonts.
-#
-SYSTEM_EMOJIS="Noto Color Emoji"

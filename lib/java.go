@@ -121,7 +121,7 @@ func substituteSpaceInJavaXLFD(xlfd string) string {
 	return strings.Replace(xlfd, " ", "_", -1)
 }
 
-// getInstalledFontNameAndPathFromList selects a font both in the lst and installed on your system for Java
+// getInstalledFontNameAndPathFromList selects a font both in the list and installed on your system for Java
 // fc-list should return only one result otherwise last one is taken in present
 func getInstalledFontNameAndPathFromList(lst FontCandidates, verbosity int) JavaFontProperty {
 	fontfile := ""

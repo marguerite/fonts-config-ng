@@ -142,7 +142,7 @@ func writeOptions(opt lib.Options, userMode bool) {
 
 func main() {
 	var userMode, remove, force, ttcap, enableJava, quiet, verbose, debug, autohint, bw, bwMono, ebitmaps, info, metric, forceFPL bool
-	var hintstyle, lcdfilter, rgba, ebitmapsLang, emojis, preferredSans, preferredSerif, preferredMono string
+	var hintstyle, lcdfilter, rgba, ebitmapsLang, preferredSans, preferredSerif, preferredMono string
 
 	cli.VersionFlag = cli.BoolFlag{
 		Name:  "version",
@@ -227,11 +227,6 @@ func main() {
 			Destination: &ebitmapsLang,
 		},
 		cli.StringFlag{
-			Name:        "emojis",
-			Usage:       "Default emoji fonts. for example\"Noto Color Emoji:Twemoji Mozilla\", glyphs from these fonts will be blacklisted in other non-emoji fonts",
-			Destination: &emojis,
-		},
-		cli.StringFlag{
 			Name:        "sans-serif",
 			Usage:       "Global preferred sans-serif families, separated by colon, which overrides any existing preference list, eg: \"Noto Sans SC:Noto Sans JP\".",
 			Destination: &preferredSans,
@@ -300,7 +295,7 @@ func main() {
 
 		options := lib.Options{verbosity, hintstyle, autohint, bw, bwMono,
 			lcdfilter, rgba, ebitmaps, ebitmapsLang,
-			emojis, preferredSans, preferredSerif,
+			preferredSans, preferredSerif,
 			preferredMono, metric, forceFPL, ttcap, enableJava}
 
 		lib.Dbg(verbosity, lib.Debug, fmt.Sprintf("Command line options: %s", options.Bounce()))

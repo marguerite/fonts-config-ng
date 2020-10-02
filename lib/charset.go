@@ -1,120 +1,272 @@
 package lib
 
 import (
-	"fmt"
-	"regexp"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
-
-	"github.com/marguerite/util/slice"
 )
 
-//Charset Font's Charset
-type Charset []string
+// Charset collection of CharsetRange
+type Charset []CharsetRange
 
-func (c Charset) Len() int { return len(c) }
-
-func (c Charset) Swap(i, j int) { c[i], c[j] = c[j], c[i] }
+func (c Charset) Len() int {
+	return len(c)
+}
 
 func (c Charset) Less(i, j int) bool {
-	a, _ := strconv.ParseInt(c[i], 16, 0)
-	b, _ := strconv.ParseInt(c[j], 16, 0)
-	return a < b
+	return c[i].Max < c[j].Min
 }
 
-//NewCharset generate charset array of a font
-func NewCharset(font string) Charset {
-	return genPlainCharset(strings.Split(font, " "))
+func (c Charset) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
 }
 
-//Intersect get intersected array of two charsets
-func (c Charset) Intersect(charset Charset) Charset {
-	slice.Intersect(&charset, c)
-	sort.Sort(charset)
-	return genRangedCharset(charset)
+// Append add c1 to c. ignore existing one
+func (c *Charset) Append(c1 CharsetRange) {
+	found := false
+	for i, v := range *c {
+		if v.Min == c1.Min && v.Max == c1.Max {
+			found = true
+			break
+		}
+		if c1.Min-v.Max == 1 {
+			tmp := append((*c)[:i], CharsetRange{v.Min, c1.Max, int(c1.Max - v.Min + 1)})
+			*c = append(tmp, (*c)[i+1:]...)
+			found = true
+			break
+		}
+		if v.Min-c1.Max == 1 {
+			tmp := append((*c)[:i], CharsetRange{c1.Min, v.Max, int(v.Max - c1.Min + 1)})
+			*c = append(tmp, (*c)[i+1:]...)
+			found = true
+			break
+		}
+	}
+	if !found {
+		*c = append(*c, c1)
+	}
 }
 
-//Concat concat two charsets into one
-func (c Charset) Concat(charset Charset) Charset {
-	c1 := genPlainCharset(c)
-	c2 := genPlainCharset(charset)
-	slice.Concat(&c1, c2)
-	return genRangedCharset(c1)
+// Intersect common value both in c and c1
+func (c Charset) Intersect(c1 Charset) Charset {
+	c2 := Charset{}
+	for _, v := range c {
+		for _, v1 := range c1 {
+			v2, ok := v.Intersect(v1)
+			if ok {
+				c2 = append(c2, v2)
+			}
+		}
+	}
+	return c2
 }
 
-// genRangedCharset convert int to range in charset
-func genRangedCharset(c Charset) Charset {
-	if len(c) < 2 {
-		return c
+// Union merge c and c1 to c2
+func (c Charset) Union(c1 Charset) (c4 Charset) {
+	c2 := c.Substract(c1)
+	c3 := c1
+
+	for _, v := range c2 {
+		c3.Append(v)
 	}
 
-	charset := Charset{}
+	sort.Sort(c3)
 
-	sort.Sort(c)
-	idx := -1
-
-	for i := 0; i < len(c); i++ {
-		if i == len(c)-1 {
-			if idx >= 0 && minusChar(c[i], c[i-1]) == 1 {
-				charset = append(charset, c[idx]+".."+c[i])
+	for i := 0; i < len(c3); i++ {
+		if i == len(c3)-1 {
+			c4.Append(c3[i])
+			break
+		}
+		stop := c3[i].Max
+		jump := 0
+		for j := i + 1; j < len(c3); j++ {
+			if c3[j].Min-c3[j-1].Max == 1 {
+				stop = c3[j].Max
+				jump++
 			} else {
-				charset = append(charset, c[i])
+				break
 			}
+		}
+		c4.Append(CharsetRange{c3[i].Min, stop, int(stop - c3[i].Min + 1)})
+		i += jump
+	}
+
+	return c4
+}
+
+// Substract substract the CharsetRanges in c1 from c
+func (c Charset) Substract(c1 Charset) (c2 Charset) {
+	for _, v := range c {
+		idx := 0
+		for i, v1 := range c1 {
+			val := v.Spaceship(v1)
+			switch val {
+			case 0, -0.5:
+				continue
+			case 1:
+				r := CharsetRange{v.Min, v1.Min - 1, int(v1.Min - v.Min)}
+				tc := Charset([]CharsetRange{r}).Substract(c1[:i])
+				if len(tc) > 0 {
+					for _, v2 := range tc {
+						c2.Append(v2)
+					}
+				} else {
+					c2.Append(r)
+				}
+			case -1:
+				r := CharsetRange{v1.Max + 1, v.Max, int(v.Max - v1.Max)}
+				tc := Charset([]CharsetRange{r}).Substract(c1[i+1:])
+				if len(tc) > 0 {
+					for _, v2 := range tc {
+						c2.Append(v2)
+					}
+				} else {
+					c2.Append(r)
+				}
+				// two value case
+			case 0.5:
+				if v.Min == v1.Min {
+					r := CharsetRange{v1.Max + 1, v.Max, int(v.Max - v1.Max)}
+					tc := Charset([]CharsetRange{r}).Substract(c1[i+1:])
+					if len(tc) > 0 {
+						for _, v2 := range tc {
+							c2.Append(v2)
+						}
+					} else {
+						c2.Append(r)
+					}
+					continue
+				}
+				if v.Max == v1.Max {
+					r := CharsetRange{v.Min, v1.Min - 1, int(v1.Min - v.Min)}
+					tc := Charset([]CharsetRange{r}).Substract(c1[:i])
+					if len(tc) > 0 {
+						for _, v2 := range tc {
+							c2.Append(v2)
+						}
+					} else {
+						c2.Append(r)
+					}
+					continue
+				}
+				r := CharsetRange{v1.Max + 1, v.Max, int(v.Max - v1.Max)}
+				tc := Charset([]CharsetRange{r}).Substract(c1[i+1:])
+				if len(tc) > 0 {
+					for _, v2 := range tc {
+						c2.Append(v2)
+					}
+				} else {
+					c2.Append(r)
+				}
+				r1 := CharsetRange{v.Min, v1.Min - 1, int(v1.Min - v.Min)}
+				tc1 := Charset([]CharsetRange{r1}).Substract(c1[:i])
+				if len(tc1) > 0 {
+					for _, v2 := range tc1 {
+						c2.Append(v2)
+					}
+				} else {
+					c2.Append(r1)
+				}
+			default:
+				idx++
+			}
+			if idx == len(c1) {
+				c2.Append(v)
+			}
+		}
+	}
+	sort.Sort(c2)
+	return c2
+}
+
+// String echo the Charset as string
+func (c Charset) String() string {
+	str := ""
+	for _, v := range c {
+		if v.Len == 1 {
+			str += strconv.FormatUint(v.Min, 16) + " "
 			continue
 		}
-
-		if minusChar(c[i+1], c[i]) == 1 {
-			if idx < 0 {
-				idx = i
-			}
-		} else {
-			if idx >= 0 {
-				charset = append(charset, c[idx]+".."+c[i])
-				idx = -1
-			} else {
-				charset = append(charset, c[i])
-			}
-		}
+		str += strconv.FormatUint(v.Min, 16) + "-" + strconv.FormatUint(v.Max, 16) + " "
 	}
+	return str
+}
 
+// CharsetRange like 1f9a3-1f9cb
+type CharsetRange struct {
+	Min uint64
+	Max uint64
+	Len int
+}
+
+// Spaceship the spaceship operator
+// -2.0 means c1 is outside of c and is lower than c
+// 2.0 means c1 is outside of c and is greater than c
+// -1.0 means c1 intersects the lower side of c
+// 1.0 means c1 intersects the greater side of c
+// 0.5 means c1 is in c
+// -0.5 means c1 fully covers c
+// 0 means c1 is equal to c
+func (c CharsetRange) Spaceship(c1 CharsetRange) float64 {
+	if c.Min > c1.Max {
+		return -2.0
+	}
+	if c.Max < c1.Min {
+		return 2.0
+	}
+	if c.Min == c1.Min && c.Max == c1.Max {
+		return 0.0
+	}
+	// inside
+	if c.Min < c1.Min && c.Max > c1.Max {
+		return 0.5
+	}
+	// covered
+	if c.Min >= c1.Min && c.Max <= c1.Max {
+		return -0.5
+	}
+	// left intersect
+	if c.Max > c1.Max {
+		return -1.0
+	}
+	// right intersect
+	return 1.0
+}
+
+// Intersect get the intersection of two CharsetRanges
+func (c CharsetRange) Intersect(c1 CharsetRange) (CharsetRange, bool) {
+	val := c.Spaceship(c1)
+	if val == 0.0 || val == -0.5 {
+		return c, true
+	}
+	if math.Abs(val) > 1.0 {
+		return CharsetRange{uint64(0), uint64(0), 0}, false
+	}
+	min := c.Min
+	max := c.Max
+	if c1.Min > min {
+		min = c1.Min
+	}
+	if c1.Max < max {
+		max = c1.Max
+	}
+	len := int(max - min + 1)
+	return CharsetRange{min, max, len}, true
+}
+
+// NewCharset initialize a Charset from string
+func NewCharset(in string) (charset Charset) {
+	for _, i := range strings.Split(in, " ") {
+		if strings.Contains(i, "-") {
+			arr := strings.Split(i, "-")
+			a, _ := strconv.ParseUint(arr[0], 16, 32)
+			b, _ := strconv.ParseUint(arr[1], 16, 32)
+			charset = append(charset, CharsetRange{a, b, int(b - a + 1)})
+			continue
+		}
+		j, _ := strconv.ParseUint(i, 16, 32)
+		charset = append(charset, CharsetRange{j, j, 1})
+	}
 	return charset
-}
-
-func minusChar(c1, c2 string) int64 {
-	a, _ := strconv.ParseInt(c1, 16, 0)
-	b, _ := strconv.ParseInt(c2, 16, 0)
-	return a - b
-}
-
-func parseCharsetRange(s string) Charset {
-	r := Charset{}
-	// some Simplified Chinese contains 2fa15-2fa1c20-7e, which is actually
-	// 3 loops of a same charset. the break point is not "-7e", but "20-7e",
-	// which is the begin char of the next loop
-	// eg: fc-scan --format "%{charset}" /usr/share/fonts/truetype/wqy-zenhei.ttc
-	re := regexp.MustCompile(`^(\w+)-(\w+)(20-7[0-9a-f])?$`)
-	m := re.FindStringSubmatch(s)
-	start, _ := strconv.ParseInt(m[1], 16, 0)
-	stop, _ := strconv.ParseInt(m[2], 16, 0)
-	for i := start; i <= stop; i++ {
-		r = append(r, fmt.Sprintf("%x", i))
-	}
-	return r
-}
-
-func genPlainCharset(charset Charset) Charset {
-	c := Charset{}
-	// unique the ranged charset string to reduce calculation
-	slice.Unique(&charset)
-	for _, char := range charset {
-		if strings.Contains(char, "-") {
-			for _, r := range parseCharsetRange(char) {
-				c = append(c, r)
-			}
-		} else {
-			c = append(c, char)
-		}
-	}
-	return c
 }

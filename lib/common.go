@@ -23,7 +23,7 @@ const Quiet int = 0
 // FcSuffix suffix for every fontconfig configuration file
 const FcSuffix string = "</fontconfig>\n"
 
-// dbg if dbgLevel >= limit, return the dbgOut. dbgOut can be plain string or func to format debug information by yourself
+// Dbg if dbgLevel >= limit, return the dbgOut. dbgOut can be plain string or func to format debug information by yourself
 func Dbg(verbosity int, level int, dbgOut interface{}, parms ...interface{}) {
 	if verbosity >= level {
 		kd := reflect.TypeOf(dbgOut).Kind()

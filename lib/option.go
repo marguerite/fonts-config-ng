@@ -3,13 +3,14 @@ package lib
 import (
 	"bufio"
 	"fmt"
-	"github.com/marguerite/util/slice"
 	"io"
 	"log"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/marguerite/util/slice"
 )
 
 // Options our fonts-config program's inner options, controls the generated fontconfig conf
@@ -23,7 +24,6 @@ type Options struct {
 	UseRgba                    string
 	UseEmbeddedBitmaps         bool
 	EmbeddedBitmapsLanguages   string
-	SystemEmojis               string
 	PreferSansFamilies         string
 	PreferSerifFamilies        string
 	PreferMonoFamilies         string
@@ -154,7 +154,7 @@ func parseBool(b bool) string {
 // NewOptions generate default Options
 func NewOptions() Options {
 	return Options{0, "", false, false, false, "", "", false,
-		"", "", "", "", "", false, false,
+		"", "", "", "", false, false,
 		false, false}
 }
 
