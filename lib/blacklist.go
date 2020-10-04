@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"sync"
+
+	"github.com/openSUSE/fonts-config/sysconfig"
 )
 
 // getEmojiFonts get all system emoji fonts
@@ -26,15 +28,15 @@ type Blacklist struct {
 // GenEmojiBlacklist generate 81-emoji-blacklist-glyphs.conf
 // 1. blacklist charsets < 200d in emoji fonts, they are everywhere and non-emoji
 // 2. balcklist emoji unicode codepoints in other fonts
-func GenEmojiBlacklist(c Collection, userMode bool, opts Options) {
-	emojis := getEmojiFonts(c)
+func GenEmojiBlacklist(collection Collection, userMode bool, cfg sysconfig.SysConfig) {
+	emojis := getEmojiFonts(collection)
 
 	// no emoji fonts on the system
 	if len(emojis) == 0 {
 		return
 	}
 
-	Dbg(opts.Verbosity, Debug, "blacklisting charsets < 200d in emoji fonts")
+	Dbg(cfg.Int("VERBOSITY"), Debug, "blacklisting charsets < 200d in emoji fonts")
 
 	var emojiConf, nonEmojiConf string
 	var charset Charset
@@ -66,14 +68,14 @@ func GenEmojiBlacklist(c Collection, userMode bool, opts Options) {
 		}
 	}
 
-	Dbg(opts.Verbosity, Debug, "blacklisting emoji glyphs from non-emoji fonts")
+	Dbg(cfg.Int("VERBOSITY"), Debug, "blacklisting emoji glyphs from non-emoji fonts")
 
 	wg := sync.WaitGroup{}
-	wg.Add(len(c) - len(emojis))
+	wg.Add(len(collection) - len(emojis))
 	mux := sync.Mutex{}
 	ch := make(chan struct{}, 100) // ch is a chan to avoid "too many open files" when os exec
 
-	for _, font := range c {
+	for _, font := range collection {
 		if !font.IsEmoji() {
 			go func(f Font, verbosity int) {
 				defer wg.Done()
@@ -94,7 +96,7 @@ func GenEmojiBlacklist(c Collection, userMode bool, opts Options) {
 					nonEmojiConf += genBlacklistConfig(b)
 					mux.Unlock()
 				}
-			}(font, opts.Verbosity)
+			}(font, cfg.Int("VERBOSITY"))
 		}
 	}
 

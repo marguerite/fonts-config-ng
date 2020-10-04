@@ -1,18 +1,14 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/user"
 	"path/filepath"
-	"reflect"
-	"strings"
-	"unsafe"
 
-	"github.com/marguerite/util/slice"
 	"github.com/openSUSE/fonts-config/lib"
+	"github.com/openSUSE/fonts-config/sysconfig"
 	"github.com/urfave/cli"
 )
 
@@ -54,47 +50,6 @@ func yastInfo() {
 		"  user rendering config: fontconfig/rendering-options.conf\n")
 }
 
-// cliFlagsRltPos return relative positions in Options for flags set by cli
-func cliFlagsRltPos(c *cli.Context) []int {
-	rp := []int{}
-
-	// read and dump private field "flagSet" of *cli.Context
-	flagSet := reflect.ValueOf(c).Elem().FieldByName("flagSet")
-	// make it readable
-	flagSet = reflect.NewAt(flagSet.Type(), unsafe.Pointer(flagSet.UnsafeAddr())).Elem()
-	cliFlags, _ := flagSet.Interface().(*flag.FlagSet)
-
-	// check verbosity
-	cliFlags.Visit(func(f *flag.Flag) {
-		ok, _ := slice.Contains([]string{"quiet", "verbose", "debug"}, f.Name)
-		if ok {
-			rp = append(rp, 0)
-		}
-	})
-
-	// check all other options
-	for i, v := range c.App.Flags[6:22] {
-		name := v.GetName()
-		cliFlags.Visit(func(f *flag.Flag) {
-			if strings.Split(name, ",")[0] == f.Name {
-				rp = append(rp, i+1) // the verbosity
-			}
-		})
-	}
-	return rp
-}
-
-// verbosityLevel decide the verbosity level
-func verbosityLevel(quiet, verbose, debug bool) int {
-	m := map[bool]int{quiet: lib.Quiet, verbose: lib.Verbose, debug: lib.Debug}
-	for k, v := range m {
-		if k {
-			return v
-		}
-	}
-	return 0
-}
-
 func getUserPrefix(userMode bool, verbosity int) string {
 	if !userMode {
 		return ""
@@ -103,42 +58,7 @@ func getUserPrefix(userMode bool, verbosity int) string {
 	return prefix
 }
 
-func loadOptions(opt lib.Options, c *cli.Context, userMode bool) lib.Options {
-	sys := lib.NewReader(lib.GetConfigLocation("fc", false))
-	config := lib.LoadOptions(sys, lib.NewOptions())
-	lib.Dbg(opt.Verbosity, lib.Debug, fmt.Sprintf("System Configuration: %s", config.Bounce()))
-
-	if userMode {
-		user := lib.NewReader(lib.GetConfigLocation("fc", true))
-		config = lib.LoadOptions(user, config)
-		lib.Dbg(config.Verbosity, lib.Debug, fmt.Sprintf("With user configuration prepended:\n %s", config.Bounce()))
-	}
-
-	config.Merge(opt, cliFlagsRltPos(c))
-	lib.Dbg(config.Verbosity, lib.Debug, fmt.Sprintf("With command line configuration prepended:\n %s", config.Bounce()))
-
-	writeOptions(config, userMode)
-
-	return config
-}
-
-func writeOptions(opt lib.Options, userMode bool) {
-	tmpl := lib.NewReader(lib.GetConfigLocation("fc", userMode))
-	config := opt.FillTemplate(tmpl)
-
-	f, err := os.OpenFile(lib.GetConfigLocation("fc", userMode), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
-	if err != nil {
-		log.Fatalf("Can not open %s to write: %s.\n", lib.GetConfigLocation("fc", userMode), err.Error())
-	}
-	defer f.Close()
-
-	lib.WriteOptions(f, config)
-}
-
 func main() {
-	var userMode, remove, force, ttcap, enableJava, quiet, verbose, debug, autohint, bw, bwMono, ebitmaps, info, metric, forceFPL, nextUpdate bool
-	var hintstyle, lcdfilter, rgba, ebitmapsLang, preferredSans, preferredSerif, preferredMono string
-
 	cli.VersionFlag = cli.BoolFlag{
 		Name:  "version",
 		Usage: "Display version and exit.",
@@ -152,148 +72,134 @@ func main() {
 	}
 	app.Flags = []cli.Flag{
 		cli.BoolFlag{
-			Name:        "user, u",
-			Usage:       "Run fontconfig setup for user.",
-			Destination: &userMode,
+			Name:  "user, u",
+			Usage: "Run fontconfig setup for user.",
 		},
 		cli.BoolFlag{
-			Name:        "remove-user-setting, r",
-			Usage:       "Remove current user's fontconfig setup.",
-			Destination: &remove,
+			Name:  "remove-user-setting, r",
+			Usage: "Remove current user's fontconfig setup.",
 		},
 		cli.BoolFlag{
-			Name:        "force, f",
-			Usage:       "Force the update of all generated files even if it appears unnecessary according to the time stamps",
-			Destination: &force,
+			Name:  "force, f",
+			Usage: "Force the update of all generated files even if it appears unnecessary according to the time stamps",
 		},
 		cli.BoolTFlag{
-			Name:        "quiet, q",
-			Usage:       "Work silently, unless an error occurs.",
-			Destination: &quiet,
+			Name:  "quiet, q",
+			Usage: "Work silently, unless an error occurs.",
 		},
 		cli.BoolFlag{
-			Name:        "verbose, v",
-			Usage:       "Print some progress messages to standard output.Print some progress messages to standard output.",
-			Destination: &verbose,
+			Name:  "verbose, v",
+			Usage: "Print some progress messages to standard output.Print some progress messages to standard output.",
 		},
 		cli.BoolFlag{
-			Name:        "debug, d",
-			Usage:       "Print a lot of debugging messages to standard output.",
-			Destination: &debug,
+			Name:  "debug, d",
+			Usage: "Print a lot of debugging messages to standard output.",
 		},
 		cli.StringFlag{
-			Name:        "force-hintstyle",
-			Usage:       "Which 'hintstyle' to enforce globally: hintfull, hintmedium, hintslight or hintnone.",
-			Destination: &hintstyle,
+			Name:  "force-hintstyle",
+			Usage: "Which 'hintstyle' to enforce globally: hintfull, hintmedium, hintslight or hintnone.",
 		},
 		cli.BoolFlag{
-			Name:        "autohint",
-			Usage:       "Use autohint even for well hinted fonts.",
-			Destination: &autohint,
+			Name:  "autohint",
+			Usage: "Use autohint even for well hinted fonts.",
 		},
 		cli.BoolFlag{
-			Name:        "force-bw",
-			Usage:       "Do not use antialias.",
-			Destination: &bw,
+			Name:  "force-bw",
+			Usage: "Do not use antialias.",
 		},
 		cli.BoolFlag{
-			Name:        "force-bw-monospace",
-			Usage:       "Do not use antialias for well instructed monospace fonts.",
-			Destination: &bwMono,
+			Name:  "force-bw-monospace",
+			Usage: "Do not use antialias for well instructed monospace fonts.",
 		},
 		cli.StringFlag{
-			Name:        "lcdfilter",
-			Usage:       "Which `lcdfilter` to use: lcdnone, lcddefault, lcdlight, lcdlegacy.",
-			Destination: &lcdfilter,
+			Name:  "lcdfilter",
+			Usage: "Which `lcdfilter` to use: lcdnone, lcddefault, lcdlight, lcdlegacy.",
 		},
 		cli.StringFlag{
-			Name:        "rgba",
-			Usage:       "Which `subpixel arrangement` your monitor use: none, rgb, vrgb, bgr, vbgr, unknown.",
-			Destination: &rgba,
+			Name:  "rgba",
+			Usage: "Which `subpixel arrangement` your monitor use: none, rgb, vrgb, bgr, vbgr, unknown.",
 		},
 		cli.BoolFlag{
-			Name:        "ebitmaps",
-			Usage:       "Whether to use embedded bitmaps or not",
-			Destination: &ebitmaps,
+			Name:  "ebitmaps",
+			Usage: "Whether to use embedded bitmaps or not",
 		},
 		cli.StringFlag{
-			Name:        "ebitmapslang",
-			Usage:       "Argument contains a `list` of colon separated languages, for example \"ja:ko:zh-CN\" which means \"use embedded bitmaps only for fonts supporting Japanese, Korean, or Simplified Chinese.",
-			Destination: &ebitmapsLang,
+			Name:  "ebitmapslang",
+			Usage: "Argument contains a `list` of colon separated languages, for example \"ja:ko:zh-CN\" which means \"use embedded bitmaps only for fonts supporting Japanese, Korean, or Simplified Chinese.",
 		},
 		cli.StringFlag{
-			Name:        "sans-serif",
-			Usage:       "Global preferred sans-serif families, separated by colon, which overrides any existing preference list, eg: \"Noto Sans SC:Noto Sans JP\".",
-			Destination: &preferredSans,
+			Name:  "sans-serif",
+			Usage: "Global preferred sans-serif families, separated by colon, which overrides any existing preference list, eg: \"Noto Sans SC:Noto Sans JP\".",
 		},
 		cli.StringFlag{
-			Name:        "serif",
-			Usage:       "Global preferred serif families, separated by colon, which overrides any existing preference list, eg: \"Noto Serif SC:Noto Serif JP\".",
-			Destination: &preferredSerif,
+			Name:  "serif",
+			Usage: "Global preferred serif families, separated by colon, which overrides any existing preference list, eg: \"Noto Serif SC:Noto Serif JP\".",
 		},
 		cli.StringFlag{
-			Name:        "monospace",
-			Usage:       "Global preferred sans-serif families, separated by colon, which overrides any existing preference list, eg: \"Noto Sans Mono CJK SC:Noto Sans Mono CJK JP\".",
-			Destination: &preferredMono,
+			Name:  "monospace",
+			Usage: "Global preferred sans-serif families, separated by colon, which overrides any existing preference list, eg: \"Noto Sans Mono CJK SC:Noto Sans Mono CJK JP\".",
 		},
 		cli.BoolFlag{
-			Name:        "metriccompatible",
-			Usage:       "Use metric compatible fonts.",
-			Destination: &metric,
+			Name:  "metriccompatible",
+			Usage: "Use metric compatible fonts.",
 		},
 		cli.BoolFlag{
-			Name:        "forceFPL",
-			Usage:       "Force Family preference list, use together with -sansSerif/-serif/-monospace.",
-			Destination: &forceFPL,
+			Name:  "forceFPL",
+			Usage: "Force Family preference list, use together with -sansSerif/-serif/-monospace.",
 		},
 		cli.BoolFlag{
-			Name:        "ttcap",
-			Usage:       "Generate TTCap entries..",
-			Destination: &ttcap,
+			Name:  "ttcap",
+			Usage: "Generate TTCap entries..",
 		},
 		cli.BoolFlag{
-			Name:        "java",
-			Usage:       "Generate font setup for Java.",
-			Destination: &enableJava,
+			Name:  "java",
+			Usage: "Generate font setup for Java.",
 		},
 		cli.BoolFlag{
-			Name:        "info",
-			Usage:       "Print files used by fonts-config for YaST Fonts module.",
-			Destination: &info,
+			Name:  "info",
+			Usage: "Print files used by fonts-config for YaST Fonts module.",
 		},
 	}
 
 	app.Action = func(c *cli.Context) error {
 
-		if info {
+		if c.Bool("info") {
 			yastInfo()
 			os.Exit(0)
 		}
 
 		currentUser, _ := user.Current()
-		if !userMode && currentUser.Uid != "0" && currentUser.Username != "root" {
+		if !c.Bool("u") && currentUser.Uid != "0" && currentUser.Username != "root" {
 			log.Fatal("*** error: no root permissions; rerun with --user for user fontconfig setting.")
 		}
 
 		// parse verbosity
-		verbosity := verbosityLevel(quiet, verbose, debug)
+		verbosity := 0
+		if c.Bool("d") {
+			verbosity = 256
+		}
+		if c.Bool("v") {
+			verbosity = 1
+		}
 
-		if remove {
-			err := removeUserSetting(getUserPrefix(userMode, verbosity))
+		if c.Bool("r") {
+			err := removeUserSetting(getUserPrefix(c.Bool("u"), verbosity))
 			if err != nil {
 				log.Fatalf("Can not remove configuration file: %s", err.Error())
 			}
 			os.Exit(0)
 		}
 
-		options := lib.Options{verbosity, hintstyle, autohint, bw, bwMono,
-			lcdfilter, rgba, ebitmaps, ebitmapsLang,
-			preferredSans, preferredSerif,
-			preferredMono, metric, forceFPL, ttcap, enableJava, nextUpdate}
+		var cfg sysconfig.SysConfig
+		f, _ := os.Open("/etc/sysconfig/fonts-config")
+		defer f.Close()
+		cfg.Unmarshal(f)
 
-		lib.Dbg(verbosity, lib.Debug, fmt.Sprintf("Command line options: %s", options.Bounce()))
-
-		config := loadOptions(options, c, userMode)
+		// overwrite cfg
+		if len(c.String("force-hintstyle")) > 0 {
+			cfg["FORCE_HINTSTYLE"] = c.String("force-hintstyle")
+		}
+		//FIXME: more
 
 		lib.Dbg(verbosity, lib.Debug, func(mode bool) string {
 			info := ""
@@ -310,10 +216,10 @@ func main() {
 				info += ")\n"
 			}
 			return info
-		}, userMode)
+		}, c.Bool("u"))
 
-		if !userMode {
-			err := lib.MkFontScaleDir(config, force)
+		if !c.Bool("u") {
+			err := lib.MkFontScaleDir(cfg, c.Bool("force"))
 			lib.ErrChk(err)
 			lib.GenMetricCompatibility(verbosity)
 		}
@@ -324,20 +230,20 @@ func main() {
 			# will think that the cache files are out of date again. */
 
 		collection := lib.NewCollection()
-		lib.GenTTType(collection, userMode)
-		lib.GenRenderingOptions(userMode, config)
-		lib.GenFamilyPreferenceLists(userMode, config)
-		lib.GenEmojiBlacklist(collection, userMode, config)
-		lib.GenNotoConfig(collection, userMode)
-		lib.GenCJKConfig(collection, userMode)
+		lib.GenTTType(collection, c.Bool("u"))
+		lib.GenRenderingOptions(c.Bool("u"), cfg)
+		lib.GenFamilyPreferenceLists(c.Bool("u"), cfg)
+		lib.GenEmojiBlacklist(collection, c.Bool("u"), cfg)
+		lib.GenNotoConfig(collection, c.Bool("u"))
+		lib.GenCJKConfig(collection, c.Bool("u"))
 
-		if !userMode {
-			lib.FcCache(config.Verbosity)
-			lib.FpRehash(config.Verbosity)
-			if config.GenerateJavaFontSetup {
-				lib.GenerateJavaFontSetup(config.Verbosity)
+		if !c.Bool("u") {
+			lib.FcCache(cfg.Int("VERBOSITY"))
+			lib.FpRehash(cfg.Int("VERBOSITY"))
+			if cfg.Bool("GENERATE_JAVA_FONT_SETUP") {
+				lib.GenerateJavaFontSetup(cfg.Int("VERBOSITY"))
 			}
-			lib.ReloadXfsConfig(config.Verbosity)
+			lib.ReloadXfsConfig(cfg.Int("VERBOSITY"))
 		}
 
 		return nil

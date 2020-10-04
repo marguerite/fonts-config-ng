@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/openSUSE/fonts-config/sysconfig"
 )
 
-func genBitmapLanguagesConfig(opts Options) string {
+func genBitmapLanguagesConfig(cfg sysconfig.SysConfig) string {
 	tmp := "\t<match target=\"font\">\n"
 	tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"append\">\n"
-	if opts.UseEmbeddedBitmaps {
-		if opts.EmbeddedBitmapsLanguages == "no" || len(opts.EmbeddedBitmapsLanguages) == 0 {
+	if cfg.Bool("USE_EMBEDDED_BITMAPS") {
+		if len(cfg.String("EMBEDDED_BITMAPS_LANGUAGES")) == 0 {
 			tmp += "\t\t\t<b>true</bool>\n"
 			tmp += "\t\t</edit>\n"
 			tmp += "\t</match>\n"
@@ -19,7 +21,7 @@ func genBitmapLanguagesConfig(opts Options) string {
 		tmp += "\t\t\t<bool>false</bool>\n"
 		tmp += "\t\t</edit>\n"
 		tmp += "\t</match>\n"
-		for _, v := range strings.Split(opts.EmbeddedBitmapsLanguages, ":") {
+		for _, v := range strings.Split(cfg.String("EMBEDDED_BITMAPS_LANGUAGES"), ":") {
 			tmp += "\t<match target=\"font\">\n"
 			tmp += "\t\t<test name=\"lang\" compare=\"contains\"><string>" + v + "</string></test>\n"
 			tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"append\"><bool>true</bool></edit>\n"
@@ -34,13 +36,13 @@ func genBitmapLanguagesConfig(opts Options) string {
 }
 
 // GenRenderingOptions generates fontconfig rendering options conf
-func GenRenderingOptions(userMode bool, opts Options) {
+func GenRenderingOptions(userMode bool, cfg sysconfig.SysConfig) {
 	/* # reflect fonts-config syconfig variables or
 	   # parameters in fontconfig setting to control rendering */
 	renderFile := GetConfigLocation("render", userMode)
 
-	Dbg(opts.Verbosity, Debug, fmt.Sprintf("Generating %s.", renderFile))
-	renderText := genRenderingOptions(opts, userMode)
+	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("Generating %s.", renderFile))
+	renderText := genRenderingOptions(cfg, userMode)
 
 	err := overwriteOrRemoveFile(renderFile, []byte(renderText), 0644)
 	if err != nil {
@@ -48,28 +50,28 @@ func GenRenderingOptions(userMode bool, opts Options) {
 	}
 }
 
-func genRenderingOptions(opts Options, userMode bool) string {
+func genRenderingOptions(cfg sysconfig.SysConfig, userMode bool) string {
 	config := ""
-	config += genStringOptionConfig(opts.Verbosity, opts.ForceHintstyle, "Forcing hintstyle:",
+	config += genStringOptionConfig(cfg.Int("VERBOSITY"), cfg.String("FORCE_HINTSTYLE"), "Forcing hintstyle:",
 		"<!-- Choose preferred common hinting style here.  -->\n<!-- Possible values: no, hitnone, hitslight, hintmedium and hintfull. -->\n<!-- Can be overridden with some other options, e. g. force_bw\n\tor force_bw_monospace => hintfull -->\n",
 		"force_hintstyle", false, true)
-	config += genBoolOptionConfig(opts.Verbosity, opts.ForceAutohint, "Forcing autohint:",
+	config += genBoolOptionConfig(cfg.Int("VERBOSITY"), cfg.Bool("FORCE_AUTOHINT"), "Forcing autohint:",
 		"<!-- Force autohint always. -->\n<!-- If false, for well hinted fonts, their instructions are used for rendering. -->\n",
 		"force_autohint", true)
-	config += genBoolOptionConfig(opts.Verbosity, opts.ForceBw, "Forcing black and white:",
+	config += genBoolOptionConfig(cfg.Int("VERBOSITY"), cfg.Bool("FORCE_BW"), "Forcing black and white:",
 		"<!-- Do not use font smoothing (black&white rendering) at all.  -->\n",
 		"force_bw", true)
-	config += genBoolOptionConfig(opts.Verbosity, opts.ForceBwMonospace, "Forcing black and white for good hinted monospace:",
+	config += genBoolOptionConfig(cfg.Int("VERBOSITY"), cfg.Bool("FORCE_BW_MONOSPACE"), "Forcing black and white for good hinted monospace:",
 		"<!-- Do not use font smoothing for some monospaced fonts.  -->\n<!-- Liberation Mono, Courier New, Andale Mono, Monaco, etc. -->\n",
 		"force_bw_monospace", true)
-	config += genStringOptionConfig(opts.Verbosity, opts.UseLcdfilter, "Lcdfilter:",
+	config += genStringOptionConfig(cfg.Int("VERBOSITY"), cfg.String("USE_LCDFILTER"), "Lcdfilter:",
 		"<!-- Set LCD filter. Amend when you want use subpixel rendering. -->\n<!-- Don't forgot to set correct subpixel ordering in 'rgba' element. -->\n<!-- Possible values: lcddefault, lcdlight, lcdlegacy, lcdnone -->\n",
 		"lcdfilter", true, false)
-	config += genStringOptionConfig(opts.Verbosity, opts.UseRgba, "Subpixel arrangement:",
+	config += genStringOptionConfig(cfg.Int("VERBOSITY"), cfg.String("USE_RGBA"), "Subpixel arrangement:",
 		"<!-- Set LCD subpixel arrangement and orientation.  -->\n<!-- Possible values: unknown, none, rgb, bgr, vrgb, vbgr. -->\n",
 		"rgba", true, false)
-	config += genBitmapLanguagesConfig(opts)
-	config += genBoolOptionConfig(opts.Verbosity, opts.SearchMetricCompatible, "Search metric compatible fonts:",
+	config += genBitmapLanguagesConfig(cfg)
+	config += genBoolOptionConfig(cfg.Int("VERBOSITY"), cfg.Bool("SEARCH_METRIC_COMPATIBLE"), "Search metric compatible fonts:",
 		"<!-- Search for metric compatible families? -->\n",
 		"search_metric_aliases", false)
 	config += genUserInclude(userMode)

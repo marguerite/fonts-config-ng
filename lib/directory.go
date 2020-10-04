@@ -14,6 +14,7 @@ import (
 	dirutils "github.com/marguerite/util/dir"
 	"github.com/marguerite/util/fileutils"
 	"github.com/marguerite/util/slice"
+	"github.com/openSUSE/fonts-config/sysconfig"
 )
 
 // FontScaleEntry presents an entry in fonts.scale.
@@ -65,7 +66,7 @@ func (f FontScale) Less(i, j int) bool {
 }
 
 // getX11FontDirs get all directories containing fonts except those in the blacklist
-func getX11FontDirs(opts Options) []string {
+func getX11FontDirs(cfg sysconfig.SysConfig) []string {
 	blacklist := []string{"/usr/share/fonts", "/usr/share/fonts/encodings", "/usr/share/fonts/encodings/large"}
 	systemFontDirs, _ := dirutils.Ls("/usr/share/fonts", "dir")
 	fontDirs := []string{}
@@ -75,7 +76,7 @@ func getX11FontDirs(opts Options) []string {
 		}
 	}
 
-	Dbg(opts.Verbosity, Debug, func() string {
+	Dbg(cfg.Int("VERBOSITY"), Debug, func() string {
 		str := "--- Font Directories\n"
 		for _, d := range fontDirs {
 			str += "\t" + d + "\n"
@@ -121,32 +122,32 @@ func createSymlink(d string) error {
 }
 
 // switchTTCap switch between Freetype style or X-TT style TTCap
-func switchTTCap(s string, opts Options) string {
+func switchTTCap(s string, cfg sysconfig.SysConfig) string {
 	// http://x-tt.osdn.jp/xtt-1.3/INSTALL.eng.txt
 	freetypeRe := regexp.MustCompile(`:(\d):`)
 	xttRe := regexp.MustCompile(`:fn=(\d):`)
 	ttcapRe := regexp.MustCompile(`(?i)[[:alpha:]]+=`)
-	if opts.GenerateTtcapEntries {
+	if cfg.Bool("GENERATE_TTCAP_ENTRIES") {
 		if freetypeRe.MatchString(s) {
 			m := freetypeRe.FindStringSubmatch(s)
-			Dbg(opts.Verbosity, Debug, fmt.Sprintf("-ttcap option is set: convert face number to TTCap syntax: fn=%s\n", m[1]))
+			Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("-ttcap option is set: convert face number to TTCap syntax: fn=%s\n", m[1]))
 			s = strings.Replace(s, m[0], ":fn="+m[1]+":", 1)
 		}
 	} else {
 		if xttRe.MatchString(s) {
 			m := xttRe.FindStringSubmatch(s)
-			Dbg(opts.Verbosity, Debug, fmt.Sprintf("-ttcap option is not set: convert face number to Freetype syntax: :%s:\n", m[1]))
+			Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("-ttcap option is not set: convert face number to Freetype syntax: :%s:\n", m[1]))
 			s = strings.Replace(s, m[0], ":"+m[1]+":", 1)
 		}
 		if ttcapRe.MatchString(s) {
 			// there's more than just a face number, better ignore it
-			Dbg(opts.Verbosity, Debug, fmt.Sprintf("Unsupported entry: %s\n", s))
+			Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("Unsupported entry: %s\n", s))
 		}
 	}
 	return s
 }
 
-func generateObliqueFromItalic(fontScale *FontScale, opts Options) {
+func generateObliqueFromItalic(fontScale *FontScale, cfg sysconfig.SysConfig) {
 	// generate an oblique entry if only italic is there and vice versa:
 	re := regexp.MustCompile(`(?i)(-[^-]+-[^-]+-[^-]+)(-[io]-)([^-]+-[^-]*-\d+-\d+-\d+-\d+-[pmc]-\d+-[^-]+-[^-]+)`)
 
@@ -161,19 +162,19 @@ func generateObliqueFromItalic(fontScale *FontScale, opts Options) {
 			}
 			if _, ok := fontScale.Find(xlfd); !ok {
 				slice.Concat(fontScale, FontScaleEntry{f.Font, xlfd, f.Option})
-				Dbg(opts.Verbosity, Debug, fmt.Sprintf("generated o/i: %s %s\n", f.Option+f.Font, xlfd))
+				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("generated o/i: %s %s\n", f.Option+f.Font, xlfd))
 			}
 		}
 	}
 }
 
-func generateTTCap(fontScale *FontScale, opts Options) {
+func generateTTCap(fontScale *FontScale, cfg sysconfig.SysConfig) {
 	// https://wiki.archlinux.org/index.php/X_Logical_Font_Description
-	if !opts.GenerateTtcapEntries {
+	if !cfg.Bool("GENERATE_TTCAP_ENTRIES") {
 		return
 	}
 
-	Dbg(opts.Verbosity, Debug, "generating TTCap options ...\n")
+	Dbg(cfg.Int("VERBOSITY"), Debug, "generating TTCap options ...\n")
 
 	re := regexp.MustCompile(`-medium-r`)
 	suffix := []string{".ttf", ".ttc", ".otf", ".otc", ".pfa", ".pfb"}
@@ -201,27 +202,27 @@ func generateTTCap(fontScale *FontScale, opts Options) {
 
 			if _, ok := fontScale.Find(italic); ok {
 				slice.Concat(fontScale, FontScaleEntry{f.Font, italic, artificialItalic})
-				Dbg(opts.Verbosity, Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", artificialItalic+f.Font, italic))
+				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", artificialItalic+f.Font, italic))
 			}
 
 			if _, ok := fontScale.Find(oblique); ok {
 				slice.Concat(fontScale, FontScaleEntry{f.Font, oblique, artificialItalic})
-				Dbg(opts.Verbosity, Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", artificialItalic+f.Font, oblique))
+				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", artificialItalic+f.Font, oblique))
 			}
 
 			if _, ok := fontScale.Find(bold); ok {
 				slice.Concat(fontScale, FontScaleEntry{f.Font, bold, doubleStrike})
-				Dbg(opts.Verbosity, Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", doubleStrike+f.Font, bold))
+				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", doubleStrike+f.Font, bold))
 			}
 
 			if _, ok := fontScale.Find(boldItalic); ok {
 				slice.Concat(fontScale, FontScaleEntry{f.Font, boldItalic, doubleStrike + artificialItalic})
-				Dbg(opts.Verbosity, Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", doubleStrike+artificialItalic+f.Font, boldItalic))
+				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", doubleStrike+artificialItalic+f.Font, boldItalic))
 			}
 
 			if _, ok := fontScale.Find(boldOblique); ok {
 				slice.Concat(fontScale, FontScaleEntry{f.Font, boldOblique, doubleStrike + artificialItalic})
-				Dbg(opts.Verbosity, Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", doubleStrike+artificialItalic+f.Font, boldOblique))
+				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", doubleStrike+artificialItalic+f.Font, boldOblique))
 			}
 		}
 	}
@@ -241,7 +242,7 @@ func generateTTCap(fontScale *FontScale, opts Options) {
 
 		if strings.Contains(f.XLFD, "c-0-jisx0201.1976-0") {
 			slice.Replace(fontScale, f, FontScaleEntry{f.Font, f.XLFD, f.Option + "bw=0.5:"})
-			Dbg(opts.Verbosity, Debug, fmt.Sprintf("added bw=0.5 option: %s %s\n", f.Option+"bw=0.5:"+f.Font, f.XLFD))
+			Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("added bw=0.5 option: %s %s\n", f.Option+"bw=0.5:"+f.Font, f.XLFD))
 		}
 	}
 }
@@ -258,7 +259,7 @@ func decodeXLFD(s string) (string, string, string, error) {
 }
 
 // fixHomeMadeFontScales fix homemade font scale entries in d/font.scale.*
-func fixHomeMadeFontScales(d string, fontScale string, opts Options, fontScales *FontScale) (map[string]bool, error) {
+func fixHomeMadeFontScales(d string, fontScale string, cfg sysconfig.SysConfig, fontScales *FontScale) (map[string]bool, error) {
 	blacklist := make(map[string]bool)
 
 	data, err := os.Open(fontScale)
@@ -267,7 +268,7 @@ func fixHomeMadeFontScales(d string, fontScale string, opts Options, fontScales 
 	}
 	defer data.Close()
 
-	Dbg(opts.Verbosity, Debug, fmt.Sprintf("reading %s ...\n", filepath.Join(d, fontScale)))
+	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("reading %s ...\n", filepath.Join(d, fontScale)))
 
 	scanner := bufio.NewScanner(data)
 	scanner.Split(bufio.ScanLines)
@@ -279,9 +280,9 @@ func fixHomeMadeFontScales(d string, fontScale string, opts Options, fontScales 
 			continue
 		}
 
-		Dbg(opts.Verbosity, Debug, fmt.Sprintf("handmade entry found: options=%s font=%s xlfd=%s\n", ttOptions, familyName, xlfd))
+		Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("handmade entry found: options=%s font=%s xlfd=%s\n", ttOptions, familyName, xlfd))
 
-		switchTTCap(ttOptions, opts)
+		switchTTCap(ttOptions, cfg)
 
 		if !strings.HasSuffix(familyName, ".cid") {
 			/* For font file name entries ending with ".cid", such a file
@@ -291,12 +292,12 @@ func fixHomeMadeFontScales(d string, fontScale string, opts Options, fontScales 
 
 			For other entries, we check whether the file exists. */
 			if _, err := os.Stat(filepath.Join(d, familyName)); os.IsNotExist(err) {
-				Dbg(opts.Verbosity, Debug, fmt.Sprintf("file %s doesn't exist, discard enntry %s\n", filepath.Join(d, familyName), line))
+				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("file %s doesn't exist, discard enntry %s\n", filepath.Join(d, familyName), line))
 				continue
 			}
 		}
 
-		Dbg(opts.Verbosity, Debug, fmt.Sprintf("adding handmade entry %s\n", line))
+		Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("adding handmade entry %s\n", line))
 		slice.Concat(fontScales, FontScaleEntry{familyName, xlfd, ttOptions})
 		/* This font has "handmade" fonts.scale entries.
 		Add it to the blacklist to discard any entries for this font
@@ -308,7 +309,7 @@ func fixHomeMadeFontScales(d string, fontScale string, opts Options, fontScales 
 }
 
 // fixSystemFontScale fix font scale entries in d/fonts.scale file
-func fixSystemFontScale(d string, opts Options, fontScales *FontScale, blacklist map[string]bool) error {
+func fixSystemFontScale(d string, cfg sysconfig.SysConfig, fontScales *FontScale, blacklist map[string]bool) error {
 	systemFileScale := filepath.Join(d, "fonts.scale")
 
 	data, err := os.Open(systemFileScale)
@@ -317,7 +318,7 @@ func fixSystemFontScale(d string, opts Options, fontScales *FontScale, blacklist
 	}
 	defer data.Close()
 
-	Dbg(opts.Verbosity, Debug, fmt.Sprintf("reading %s ...\n", systemFileScale))
+	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("reading %s ...\n", systemFileScale))
 
 	scanner := bufio.NewScanner(data)
 	scanner.Split(bufio.ScanLines)
@@ -329,15 +330,15 @@ func fixSystemFontScale(d string, opts Options, fontScales *FontScale, blacklist
 			continue
 		}
 
-		Dbg(opts.Verbosity, Debug, fmt.Sprintf("mkfontscale entry found: options=%s font=%s xlfd=%s\n", ttOptions, familyName, xlfd))
+		Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("mkfontscale entry found: options=%s font=%s xlfd=%s\n", ttOptions, familyName, xlfd))
 
 		/* mkfontscale apparently doesn't yet generate the special options for
 		the freetype module to use different face numbers in .ttc files.
 		But this might change, therefore it is probably better to check this as well: */
-		switchTTCap(ttOptions, opts)
+		switchTTCap(ttOptions, cfg)
 
 		if blacklist[familyName] {
-			Dbg(opts.Verbosity, Debug, fmt.Sprintf("%s is blacklisted, ignored.\n", filepath.Join(d, familyName)))
+			Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("%s is blacklisted, ignored.\n", filepath.Join(d, familyName)))
 			continue
 		}
 		slice.Concat(fontScales, FontScaleEntry{familyName, xlfd, ttOptions})
@@ -375,8 +376,8 @@ func writeSystemFontScale(dst string, fontScales FontScale, verbosity int) error
 	return nil
 }
 
-func fixFontScales(d string, opts Options) error {
-	Dbg(opts.Verbosity, Debug, fmt.Sprintf("------\nfix fonts.scale in %s\n", d))
+func fixFontScales(d string, cfg sysconfig.SysConfig) error {
+	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("------\nfix fonts.scale in %s\n", d))
 
 	fontScale := FontScale{}
 	blacklist := map[string]bool{}
@@ -390,26 +391,26 @@ func fixFontScales(d string, opts Options) error {
 	for _, f := range handmadeScales {
 		suffix := []string{".swp", ".bak", ".sav", ".save", ".rpmsave", ".rpmorig", ".rpmnew"}
 		if fileutils.HasPrefixOrSuffix(f, suffix) != 0 {
-			Dbg(opts.Verbosity, Debug, fmt.Sprintf("%s is considered a backup file, ignored.\n", f))
+			Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("%s is considered a backup file, ignored.\n", f))
 			continue
 		}
 
-		blacklist, err = fixHomeMadeFontScales(d, f, opts, &fontScale)
+		blacklist, err = fixHomeMadeFontScales(d, f, cfg, &fontScale)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Now parse the fonts.scale file automatically created by mkfontscale:
-	err = fixSystemFontScale(d, opts, &fontScale, blacklist)
+	err = fixSystemFontScale(d, cfg, &fontScale, blacklist)
 	if err != nil {
 		return err
 	}
 
-	generateObliqueFromItalic(&fontScale, opts)
-	generateTTCap(&fontScale, opts)
+	generateObliqueFromItalic(&fontScale, cfg)
+	generateTTCap(&fontScale, cfg)
 
-	err = writeSystemFontScale(filepath.Join(d, "fonts.scale"), fontScale, opts.Verbosity)
+	err = writeSystemFontScale(filepath.Join(d, "fonts.scale"), fontScale, cfg.Int("VERBOSITY"))
 	if err != nil {
 		return err
 	}
@@ -480,26 +481,26 @@ func applyTimestamp(timestamp, dst, fontScale, fontDir string) {
 }
 
 // makeFontScaleAndDir: make fonts.scale and fonts.dir in the provided directory.
-func makeFontScaleAndDir(d string, opts Options, force bool) error {
+func makeFontScaleAndDir(d string, cfg sysconfig.SysConfig, force bool) error {
 	timestamp := filepath.Join(d, "/.fonts-config-timestamp")
 	fontScale := filepath.Join(d, "/fonts.scale")
 	fontDir := filepath.Join(d, "/fonts.dir")
 
-	if force || checkScaleAndDirUpdate(d, timestamp, fontScale, fontDir, opts.Verbosity) {
+	if force || checkScaleAndDirUpdate(d, timestamp, fontScale, fontDir, cfg.Int("VERBOSITY")) {
 
-		Dbg(opts.Verbosity, Debug, fmt.Sprintf("%s: creating fonts.{scale,dir}\n", d))
+		Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("%s: creating fonts.{scale,dir}\n", d))
 
 		cleanScaleAndDir(fontScale, fontDir)
 		createSymlink(d)
 
 		if _, err := os.Stat("/usr/bin/mkfontscale"); !os.IsNotExist(err) {
 			cmd, _ := exec.Command("/usr/bin/mkfontscale", d).Output()
-			Dbg(opts.Verbosity, Debug, string(cmd)+"\n")
+			Dbg(cfg.Int("VERBOSITY"), Debug, string(cmd)+"\n")
 		}
 
-		tryAgain := createEmptyFontScaleFile(fontScale, opts.Verbosity)
+		tryAgain := createEmptyFontScaleFile(fontScale, cfg.Int("VERBOSITY"))
 
-		err := fixFontScales(d, opts)
+		err := fixFontScales(d, cfg)
 		if err != nil {
 			return err
 		}
@@ -514,10 +515,10 @@ func makeFontScaleAndDir(d string, opts Options, force bool) error {
 			}
 			cmdFlags = append(cmdFlags, d)
 			cmd, _ := exec.Command("/usr/bin/mkfontdir", cmdFlags...).Output()
-			Dbg(opts.Verbosity, Debug, string(cmd)+"\n")
+			Dbg(cfg.Int("VERBOSITY"), Debug, string(cmd)+"\n")
 		}
 
-		tryAgain = createOrCopyFontDirFile(fontDir, fontScale, opts.Verbosity)
+		tryAgain = createOrCopyFontDirFile(fontDir, fontScale, cfg.Int("VERBOSITY"))
 
 		// Directory done. Now update time stamps:
 		if tryAgain {
@@ -540,9 +541,9 @@ func makeFontScaleAndDir(d string, opts Options, force bool) error {
 }
 
 // MkFontScaleDir make fonts.scale and fonts.dir in font directories based on our fonts-config options
-func MkFontScaleDir(opts Options, force bool) error {
-	for _, d := range getX11FontDirs(opts) {
-		err := makeFontScaleAndDir(d, opts, force)
+func MkFontScaleDir(c sysconfig.SysConfig, force bool) error {
+	for _, d := range getX11FontDirs(c) {
+		err := makeFontScaleAndDir(d, c, force)
 		if err != nil {
 			return err
 		}

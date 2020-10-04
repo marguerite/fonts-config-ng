@@ -5,6 +5,8 @@ import (
 	"log"
 	"regexp"
 	"strings"
+
+	"github.com/openSUSE/fonts-config/sysconfig"
 )
 
 func fixFamilyName(name string) string {
@@ -17,7 +19,7 @@ func fixFamilyName(name string) string {
 	return name
 }
 
-func buildFPL(genericName, preferredFamiliesInString string, userMode bool, opts Options) string {
+func buildFPL(genericName, preferredFamiliesInString string, userMode bool, cfg sysconfig.SysConfig) string {
 	families := strings.Split(preferredFamiliesInString, ":")
 	genericName = fixFamilyName(genericName)
 	fpl := ""
@@ -26,14 +28,14 @@ func buildFPL(genericName, preferredFamiliesInString string, userMode bool, opts
 		return ""
 	}
 
-	Dbg(opts.Verbosity, Debug, func(force bool) string {
+	Dbg(cfg.Int("VERBOSITY"), Debug, func(force bool) string {
 		if force {
 			return fmt.Sprintf("Strongly preferred %s families: ", genericName)
 		}
 		return fmt.Sprintf("Preferred %s families: ", genericName)
-	}, opts.ForceFamilyPreferenceLists)
+	}, cfg.Bool("FORCE_FAMILY_PREFERENCE_LISTS"))
 
-	if opts.ForceFamilyPreferenceLists {
+	if cfg.Bool("FORCE_FAMILY_PREFERENCE_LISTS") {
 		fpl += "\t<match>\n" +
 			"\t\t<test name=\"family\"><string>$family</string></test>\n" +
 			"\t\t<edit name=\"family\" mode=\"prepend_first\" binding=\"strong\">\n"
@@ -41,7 +43,7 @@ func buildFPL(genericName, preferredFamiliesInString string, userMode bool, opts
 		for _, font := range families {
 			font = fixFamilyName(font)
 			fpl += "\t\t\t<string>" + font + "</string>\n"
-			Dbg(opts.Verbosity, Debug, "["+font+"]\n")
+			Dbg(cfg.Int("VERBOSITY"), Debug, "["+font+"]\n")
 		}
 
 		fpl += "\t\t</edit>\n\t</match>\n"
@@ -55,7 +57,7 @@ func buildFPL(genericName, preferredFamiliesInString string, userMode bool, opts
 		for _, font := range families {
 			font = fixFamilyName(font)
 			fpl += "\t\t\t<family>" + font + "</family>\n"
-			Dbg(opts.Verbosity, Debug, "["+font+"]\n")
+			Dbg(cfg.Int("VERBOSITY"), Debug, "["+font+"]\n")
 		}
 		fpl += "\t\t</prefer>\n\t</alias>\n"
 	}
@@ -64,9 +66,9 @@ func buildFPL(genericName, preferredFamiliesInString string, userMode bool, opts
 }
 
 // GenFamilyPreferenceLists generates fontconfig fpl conf with user's explicit choices
-func GenFamilyPreferenceLists(userMode bool, opts Options) {
+func GenFamilyPreferenceLists(userMode bool, cfg sysconfig.SysConfig) {
 	fplFile := GetConfigLocation("fpl", userMode)
-	Dbg(opts.Verbosity, Debug, fmt.Sprintf("Generating %s", fplFile))
+	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("Generating %s", fplFile))
 
 	fplText := genFcPreamble(userMode, "")
 
@@ -81,12 +83,12 @@ func GenFamilyPreferenceLists(userMode bool, opts Options) {
 	}
 
 	fplText += "\n"
-	fplText += buildFPL("sans-serif", opts.PreferSansFamilies, userMode, opts)
-	fplText += buildFPL("serif", opts.PreferSerifFamilies, userMode, opts)
-	fplText += buildFPL("monospace", opts.PreferMonoFamilies, userMode, opts)
+	fplText += buildFPL("sans-serif", cfg.String("PREFER_SANS_FAMILIES"), userMode, cfg)
+	fplText += buildFPL("serif", cfg.String("PREFER_SERIF_FAMILIES"), userMode, cfg)
+	fplText += buildFPL("monospace", cfg.String("PREFER_MONO_FAMILIES"), userMode, cfg)
 	fplText += FcSuffix
 
-	Dbg(opts.Verbosity, Debug, fmt.Sprintf("Writing %s.", fplFile))
+	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("Writing %s.", fplFile))
 
 	err := overwriteOrRemoveFile(fplFile, []byte(fplText), 0644)
 	if err != nil {
