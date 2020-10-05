@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/marguerite/util/dir"
+	"github.com/marguerite/util/slice"
 	"github.com/openSUSE/fonts-config/lib"
 	"github.com/openSUSE/fonts-config/sysconfig"
 	"github.com/urfave/cli"
@@ -17,21 +19,16 @@ import (
 // VERSION fonts-config's version
 const VERSION string = "20201005"
 
-func removeUserSetting(prefix string) error {
-	if len(prefix) == 0 {
-		return nil
+func rmUserFcConfig(userMode bool) {
+	if !userMode {
+		return
 	}
-	for _, f := range []string{
-		filepath.Join(prefix, "fonts-config"),
-		filepath.Join(prefix, "rendering-options.conf"),
-		filepath.Join(prefix, "family-prefer.conf"),
-	} {
-		err := os.Remove(f)
-		if err != nil {
-			return err
-		}
+	path := filepath.Join(os.Getenv("HOME"), ".config/fontconfig")
+	cfgs, _ := dir.Glob(path, "\\.conf$")
+	slice.Remove(&cfgs, filepath.Join(path, "fonts.conf"))
+	for _, f := range cfgs {
+		os.Remove(f)
 	}
-	return nil
 }
 
 func yastInfo() {
@@ -50,14 +47,6 @@ func yastInfo() {
 		"  rendering config template: /usr/share/fonts-config/10-rendering-options.conf.template\n" +
 		"  sysconfig file: /etc/sysconfig/fonts-config\n" +
 		"  user rendering config: fontconfig/rendering-options.conf\n")
-}
-
-func getUserPrefix(userMode bool, verbosity int) string {
-	if !userMode {
-		return ""
-	}
-	prefix := filepath.Join(os.Getenv("HOME"), ".config/fontconfig")
-	return prefix
 }
 
 func main() {
@@ -185,10 +174,7 @@ func main() {
 		}
 
 		if c.Bool("r") {
-			err := removeUserSetting(getUserPrefix(c.Bool("u"), verbosity))
-			if err != nil {
-				log.Fatalf("Can not remove configuration file: %s", err.Error())
-			}
+			rmUserFcConfig(c.Bool("u"))
 			os.Exit(0)
 		}
 
