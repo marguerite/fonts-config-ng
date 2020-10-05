@@ -9,14 +9,14 @@ import (
 //GenCJKConfig generate cjk specific fontconfig configuration like
 // special matrix adjustment for "Noto Sans/Serif", dual-width Asian fonts and etc.
 func GenCJKConfig(availFonts Collection, userMode bool) {
-	conf := GetConfigLocation("cjk", userMode)
+	conf := GetFcConfig("cjk", userMode)
 	text := genFcPreamble(userMode, "")
 	text += fixDualAsianFonts(availFonts, userMode)
 	text += tweakNotoSansSerif(availFonts)
 	text += aliasSourceHan(availFonts)
 	text += aliasNotoCJKOTC(availFonts)
 	text += FcSuffix
-	overwriteOrRemoveFile(conf, []byte(text), 0644)
+	overwriteOrRemoveFile(conf, []byte(text))
 }
 
 //isSpacingDual find spacing=dual/mono/charcell

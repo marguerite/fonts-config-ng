@@ -6,14 +6,16 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"reflect"
+	"strings"
 
 	"github.com/openSUSE/fonts-config/lib"
 	"github.com/openSUSE/fonts-config/sysconfig"
 	"github.com/urfave/cli"
 )
 
-// Version fonts-config's version
-const Version string = "20190608"
+// VERSION fonts-config's version
+const VERSION string = "20201005"
 
 func removeUserSetting(prefix string) error {
 	if len(prefix) == 0 {
@@ -66,7 +68,7 @@ func main() {
 	app := cli.NewApp()
 	app.Usage = "openSUSE fontconfig presets generator."
 	app.Description = "openSUSE fontconfig presets generator."
-	app.Version = Version
+	app.Version = VERSION
 	app.Authors = []cli.Author{
 		{Name: "Marguerite Su", Email: "marguerite@opensuse.org"},
 	}
@@ -97,10 +99,10 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "force-hintstyle",
-			Usage: "Which 'hintstyle' to enforce globally: hintfull, hintmedium, hintslight or hintnone.",
+			Usage: "Which `hintstyle` to enforce globally: hintfull, hintmedium, hintslight or hintnone.",
 		},
 		cli.BoolFlag{
-			Name:  "autohint",
+			Name:  "force-autohint",
 			Usage: "Use autohint even for well hinted fonts.",
 		},
 		cli.BoolFlag{
@@ -112,47 +114,47 @@ func main() {
 			Usage: "Do not use antialias for well instructed monospace fonts.",
 		},
 		cli.StringFlag{
-			Name:  "lcdfilter",
+			Name:  "use-lcdfilter",
 			Usage: "Which `lcdfilter` to use: lcdnone, lcddefault, lcdlight, lcdlegacy.",
 		},
 		cli.StringFlag{
-			Name:  "rgba",
+			Name:  "use-rgba",
 			Usage: "Which `subpixel arrangement` your monitor use: none, rgb, vrgb, bgr, vbgr, unknown.",
 		},
 		cli.BoolFlag{
-			Name:  "ebitmaps",
+			Name:  "use-embedded-bitmaps",
 			Usage: "Whether to use embedded bitmaps or not",
 		},
 		cli.StringFlag{
-			Name:  "ebitmapslang",
-			Usage: "Argument contains a `list` of colon separated languages, for example \"ja:ko:zh-CN\" which means \"use embedded bitmaps only for fonts supporting Japanese, Korean, or Simplified Chinese.",
+			Name:  "embedded-bitmaps-languages",
+			Usage: "Colon-separated `language list`, for example \"ja:ko:zh-CN\" which means \"use embedded bitmaps only for fonts supporting Japanese, Korean, or Simplified Chinese.",
 		},
 		cli.StringFlag{
-			Name:  "sans-serif",
-			Usage: "Global preferred sans-serif families, separated by colon, which overrides any existing preference list, eg: \"Noto Sans SC:Noto Sans JP\".",
+			Name:  "prefer-sans-families",
+			Usage: "Global preferred `sans-serif` families, separated by colon, which overrides any existing preference list, eg: \"Noto Sans SC:Noto Sans JP\".",
 		},
 		cli.StringFlag{
-			Name:  "serif",
-			Usage: "Global preferred serif families, separated by colon, which overrides any existing preference list, eg: \"Noto Serif SC:Noto Serif JP\".",
+			Name:  "prefer-serif-families",
+			Usage: "Global preferred `serif` families, separated by colon, which overrides any existing preference list, eg: \"Noto Serif SC:Noto Serif JP\".",
 		},
 		cli.StringFlag{
-			Name:  "monospace",
-			Usage: "Global preferred sans-serif families, separated by colon, which overrides any existing preference list, eg: \"Noto Sans Mono CJK SC:Noto Sans Mono CJK JP\".",
+			Name:  "prefer-mono-families",
+			Usage: "Global preferred `monospace` families, separated by colon, which overrides any existing preference list, eg: \"Noto Sans Mono CJK SC:Noto Sans Mono CJK JP\".",
 		},
 		cli.BoolFlag{
-			Name:  "metriccompatible",
+			Name:  "search-metric-compatible",
 			Usage: "Use metric compatible fonts.",
 		},
 		cli.BoolFlag{
-			Name:  "forceFPL",
-			Usage: "Force Family preference list, use together with -sansSerif/-serif/-monospace.",
+			Name:  "force-family-preference-lists",
+			Usage: "Force Family preference list, use together with -prefer-*-families.",
 		},
 		cli.BoolFlag{
-			Name:  "ttcap",
+			Name:  "generate-ttcap-entries",
 			Usage: "Generate TTCap entries..",
 		},
 		cli.BoolFlag{
-			Name:  "java",
+			Name:  "generate-java-font-setup",
 			Usage: "Generate font setup for Java.",
 		},
 		cli.BoolFlag{
@@ -190,37 +192,35 @@ func main() {
 			os.Exit(0)
 		}
 
-		var cfg sysconfig.SysConfig
-		f, _ := os.Open("/etc/sysconfig/fonts-config")
-		defer f.Close()
+		cfg := make(sysconfig.SysConfig)
+		f := lib.NewReader("/etc/sysconfig/fonts-config")
 		cfg.Unmarshal(f)
+		cfg["VERBOSITY"] = verbosity
 
-		// overwrite cfg
-		if len(c.String("force-hintstyle")) > 0 {
-			cfg["FORCE_HINTSTYLE"] = c.String("force-hintstyle")
+		// overwrite cfg with cli args
+		for k, v := range cfg {
+			flag := strings.ReplaceAll(strings.ToLower(k), "_", "-")
+			if c.IsSet(flag) {
+				if reflect.TypeOf(v).Kind() == reflect.Bool {
+					cfg[k] = c.Bool(flag)
+					continue
+				}
+				cfg[k] = c.String(flag)
+			}
 		}
-		//FIXME: more
 
 		lib.Dbg(verbosity, lib.Debug, func(mode bool) string {
-			info := ""
 			if mode {
-				info += fmt.Sprintf("--- USER mode (%s)\n", os.Getenv("USER"))
-			} else {
-				info += fmt.Sprintf("--- SYSTEM mode")
+				return fmt.Sprintf("--- USER mode (%s)\n", os.Getenv("USER"))
 			}
-
-			info += "\tsysconfig options (read from /etc/sysconfig/fonts-config"
-			if mode {
-				info += fmt.Sprintf(", %s)\n", lib.GetConfigLocation("fc", mode))
-			} else {
-				info += ")\n"
-			}
-			return info
+			return fmt.Sprintf("--- SYSTEM mode\n")
 		}, c.Bool("u"))
 
 		if !c.Bool("u") {
 			err := lib.MkFontScaleDir(cfg, c.Bool("force"))
-			lib.ErrChk(err)
+			if err != nil {
+				log.Fatal(err)
+			}
 			lib.GenMetricCompatibility(verbosity)
 		}
 

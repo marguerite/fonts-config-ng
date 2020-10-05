@@ -15,11 +15,11 @@ import (
 //GenTTType group fonts based on their hinting instructions' existences
 func GenTTType(fonts Collection, userMode bool) {
 	tt, nonTT := genTTType(fonts, userMode)
-	ttFile := GetConfigLocation("tt", userMode)
-	nonTTFile := GetConfigLocation("nonTT", userMode)
+	ttFile := GetFcConfig("tt", userMode)
+	nonTTFile := GetFcConfig("nonTT", userMode)
 
-	overwriteOrRemoveFile(ttFile, []byte(tt), 0644)
-	overwriteOrRemoveFile(nonTTFile, []byte(nonTT), 0644)
+	overwriteOrRemoveFile(ttFile, []byte(tt))
+	overwriteOrRemoveFile(nonTTFile, []byte(nonTT))
 }
 
 // getFontPaths get all system installed font's paths via fc-list

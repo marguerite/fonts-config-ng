@@ -10,6 +10,7 @@ import (
 
 	"github.com/marguerite/util/fileutils"
 	"github.com/marguerite/util/slice"
+	fccharset "github.com/openSUSE/fonts-config/fc-charset"
 )
 
 //Collection A collection of type Font
@@ -79,7 +80,7 @@ type Font struct {
 	Slant   int
 	Spacing int
 	Outline bool
-	Charset
+	fccharset.Charset
 }
 
 // NewFont generate a new Font structure from input string
@@ -113,7 +114,7 @@ func NewFont(font *Font, in string) {
 				font.Lang = strings.Split(strings.TrimSpace(arr[1]), "|")
 			}
 			if arr[0] == "charset" {
-				font.Charset = NewCharset(strings.TrimSpace(arr[1]))
+				font.Charset = fccharset.NewCharset(strings.TrimSpace(arr[1]))
 			}
 		}
 	} else {

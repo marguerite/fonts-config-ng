@@ -160,10 +160,10 @@ func GenNotoConfig(fonts Collection, userMode bool) {
 	fonts = fonts.FindByName("Noto")
 	family := genNotoDefaultFamily(fonts, userMode)
 	lfpl := genNotoConfig(fonts, userMode)
-	faPos := GetConfigLocation("notoDefault", userMode)
-	lfplPos := GetConfigLocation("notoPrefer", userMode)
-	overwriteOrRemoveFile(faPos, []byte(family), 0644)
-	overwriteOrRemoveFile(lfplPos, []byte(lfpl), 0644)
+	faPos := GetFcConfig("notoDefault", userMode)
+	lfplPos := GetFcConfig("notoPrefer", userMode)
+	overwriteOrRemoveFile(faPos, []byte(family))
+	overwriteOrRemoveFile(lfplPos, []byte(lfpl))
 }
 
 func genNotoDefaultFamily(fonts Collection, userMode bool) string {

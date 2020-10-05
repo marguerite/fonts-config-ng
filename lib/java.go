@@ -263,7 +263,7 @@ func GenerateJavaFontSetup(verbosity int) error {
 	}
 
 	for _, f := range javaFiles {
-		err := overwriteOrRemoveFile(f, []byte(javaText), 0644)
+		err := overwriteOrRemoveFile(f, []byte(javaText))
 		if err != nil {
 			return err
 		}

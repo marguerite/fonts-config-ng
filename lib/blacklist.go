@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 
+	fccharset "github.com/openSUSE/fonts-config/fc-charset"
 	"github.com/openSUSE/fonts-config/sysconfig"
 )
 
@@ -22,7 +23,7 @@ func getEmojiFonts(c Collection) Collection {
 // Blacklist the font name and blacklisted charset
 type Blacklist struct {
 	Name string
-	Charset
+	fccharset.Charset
 }
 
 // GenEmojiBlacklist generate 81-emoji-blacklist-glyphs.conf
@@ -39,11 +40,11 @@ func GenEmojiBlacklist(collection Collection, userMode bool, cfg sysconfig.SysCo
 	Dbg(cfg.Int("VERBOSITY"), Debug, "blacklisting charsets < 200d in emoji fonts")
 
 	var emojiConf, nonEmojiConf string
-	var charset Charset
+	var charset fccharset.Charset
 
 	for _, font := range emojis {
-		c := Charset{}
-		c1 := Charset{}
+		c := fccharset.Charset{}
+		c1 := fccharset.Charset{}
 
 		// select CharsetRange < 200d
 		for _, v := range font.Charset {
@@ -103,8 +104,8 @@ func GenEmojiBlacklist(collection Collection, userMode bool, cfg sysconfig.SysCo
 	wg.Wait()
 
 	conf := genFcPreamble(userMode, "") + emojiConf + nonEmojiConf + FcSuffix
-	blacklist := GetConfigLocation("blacklist", userMode)
-	err := overwriteOrRemoveFile(blacklist, []byte(conf), 0644)
+	blacklist := GetFcConfig("blacklist", userMode)
+	err := overwriteOrRemoveFile(blacklist, []byte(conf))
 
 	if err != nil {
 		log.Fatalf("Can not write %s: %s\n", blacklist, err.Error())

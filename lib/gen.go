@@ -8,8 +8,7 @@ import (
 // genFcPreamble generate fontconfig preamble
 func genFcPreamble(userMode bool, comment string) string {
 	config := "<?xml version=\"1.0\"?>\n<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n\n<!-- DO NOT EDIT; this is a generated file -->\n<!-- modify "
-	config += GetConfigLocation("fc", false)
-	config += " && run /usr/bin/fonts-config "
+	config += "/etc/sysconfig/fonts-config && run /usr/bin/fonts-config "
 	if userMode {
 		config += "-\\-user "
 	}

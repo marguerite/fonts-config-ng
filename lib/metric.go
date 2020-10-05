@@ -8,10 +8,9 @@ import (
 	"strings"
 )
 
-func mkMetricCompatibility(avail io.Reader) string {
-	metric := ""
-
-	scanner := bufio.NewScanner(avail)
+func mkMetricCompatibility(f io.Reader) string {
+	var metric string
+	scanner := bufio.NewScanner(f)
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -37,9 +36,9 @@ func GenMetricCompatibility(verbosity int) {
 
 	text := mkMetricCompatibility(NewReader(avail))
 
-	Dbg(verbosity, Debug, fmt.Sprintf("Writing %s.\n", file))
+	Dbg(verbosity, Debug, fmt.Sprintf("Writing %s\n", file))
 
-	err := overwriteOrRemoveFile(file, []byte(text), 0644)
+	err := overwriteOrRemoveFile(file, []byte(text))
 	if err != nil {
 		log.Fatalf("Can not write %s: %s\n", file, err.Error())
 	}

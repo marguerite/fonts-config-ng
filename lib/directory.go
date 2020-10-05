@@ -418,8 +418,8 @@ func fixFontScales(d string, cfg sysconfig.SysConfig) error {
 	return nil
 }
 
-// checkScaleAndDirUpdate: check if we need to update fonts.scale and fonts.dir for dst directory
-func checkScaleAndDirUpdate(dst, timestamp, fontScale, fontDir string, verbosity int) bool {
+// chkScaleAndDirUpdate: check if we need to update fonts.scale and fonts.dir for dst directory
+func chkScaleAndDirUpdate(dst, timestamp, fontScale, fontDir string, verbosity int) bool {
 	for _, d := range []string{dst, fontScale, fontDir} {
 		if mtimeDifferOrMissing(timestamp, d) {
 			return true
@@ -461,8 +461,8 @@ func createOrCopyFontDirFile(fontDir, fontScale string, verbosity int) bool {
 	return false
 }
 
-// removeFontCache remove fonts.cache-* in dst
-func removeFontCache(dst string) {
+// rmFontCache remove fonts.cache-* in dst
+func rmFontCache(dst string) {
 	caches, _ := filepath.Glob(filepath.Join(dst, "/fonts.cache-*"))
 	for _, cache := range caches {
 		os.Remove(cache)
@@ -486,7 +486,7 @@ func makeFontScaleAndDir(d string, cfg sysconfig.SysConfig, force bool) error {
 	fontScale := filepath.Join(d, "/fonts.scale")
 	fontDir := filepath.Join(d, "/fonts.dir")
 
-	if force || checkScaleAndDirUpdate(d, timestamp, fontScale, fontDir, cfg.Int("VERBOSITY")) {
+	if force || chkScaleAndDirUpdate(d, timestamp, fontScale, fontDir, cfg.Int("VERBOSITY")) {
 
 		Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("%s: creating fonts.{scale,dir}\n", d))
 
@@ -531,7 +531,7 @@ func makeFontScaleAndDir(d string, cfg sysconfig.SysConfig, force bool) error {
 			   remove old cache files in the individual directories
 			   (fc-cache does this as well when the cache files are out of date
 			   but it can't hurt to remove them here as well just to make sure). */
-			removeFontCache(d)
+			rmFontCache(d)
 			applyTimestamp(timestamp, d, fontScale, fontDir)
 		}
 

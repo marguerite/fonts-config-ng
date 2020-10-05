@@ -67,7 +67,7 @@ func buildFPL(genericName, preferredFamiliesInString string, userMode bool, cfg 
 
 // GenFamilyPreferenceLists generates fontconfig fpl conf with user's explicit choices
 func GenFamilyPreferenceLists(userMode bool, cfg sysconfig.SysConfig) {
-	fplFile := GetConfigLocation("fpl", userMode)
+	fplFile := GetFcConfig("fpl", userMode)
 	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("Generating %s", fplFile))
 
 	fplText := genFcPreamble(userMode, "")
@@ -90,7 +90,7 @@ func GenFamilyPreferenceLists(userMode bool, cfg sysconfig.SysConfig) {
 
 	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("Writing %s.", fplFile))
 
-	err := overwriteOrRemoveFile(fplFile, []byte(fplText), 0644)
+	err := overwriteOrRemoveFile(fplFile, []byte(fplText))
 	if err != nil {
 		log.Fatalf("Can not write %s: %s\n", fplFile, err.Error())
 	}

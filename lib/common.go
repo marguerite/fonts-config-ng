@@ -44,42 +44,28 @@ func Dbg(verbosity int, level int, dbgOut interface{}, parms ...interface{}) {
 	}
 }
 
-// ErrChk panic at error
-func ErrChk(e error) {
-	if e != nil {
-		log.Fatal(e)
-	}
-}
-
-// location system locations
-type location struct {
-	System string
-	User   string
-}
-
-// GetConfigLocation return config file locations
-func GetConfigLocation(c string, userMode bool) string {
-	m := map[string]location{
-		"fc":          {"fonts-config", "fonts-config"},
-		"render":      {"10-rendering-options.conf", "rendering-options.conf"},
-		"fpl":         {"58-family-prefer-local.conf", "family-prefer.conf"},
-		"blacklist":   {"81-emoji-blacklist-glyphs.conf", "emoji-blacklist-glyphs.conf"},
-		"tt":          {"10-group-tt-hinted-fonts.conf", "tt-hinted-fonts.conf"},
-		"nonTT":       {"10-group-tt-non-hinted-fonts.conf", "tt-non-hinted-fonts.conf"},
-		"notoDefault": {"49-family-default-noto.conf", "family-default-noto.conf"},
-		"notoPrefer":  {"59-family-prefer-lang-specific-noto.conf", "family-prefer-lang-specific-noto.conf"},
-		"cjk":         {"59-family-prefer-lang-specific-cjk.conf", "family-prefer-lang-specific-cjk.conf"},
+// GetFcConfig return fontconfig file locations
+func GetFcConfig(c string, userMode bool) string {
+	m := map[string][]string{
+		"render":      []string{"10-rendering-options.conf", "rendering-options.conf"},
+		"fpl":         []string{"58-family-prefer-local.conf", "family-prefer.conf"},
+		"blacklist":   []string{"81-emoji-blacklist-glyphs.conf", "emoji-blacklist-glyphs.conf"},
+		"tt":          []string{"10-group-tt-hinted-fonts.conf", "tt-hinted-fonts.conf"},
+		"nonTT":       []string{"10-group-tt-non-hinted-fonts.conf", "tt-non-hinted-fonts.conf"},
+		"notoDefault": []string{"49-family-default-noto.conf", "family-default-noto.conf"},
+		"notoPrefer":  []string{"59-family-prefer-lang-specific-noto.conf", "family-prefer-lang-specific-noto.conf"},
+		"cjk":         []string{"59-family-prefer-lang-specific-cjk.conf", "family-prefer-lang-specific-cjk.conf"},
 	}
 
 	if userMode {
-		return filepath.Join(os.Getenv("HOME"), ".config/fontconfig/"+m[c].User)
+		return filepath.Join(os.Getenv("HOME"), ".config/fontconfig", m[c][1])
 	}
 
 	prefix := "/etc/sysconfig"
-	if strings.HasSuffix(m[c].System, ".conf") {
+	if strings.HasSuffix(m[c][0], ".conf") {
 		prefix = "/etc/fonts/conf.d"
 	}
-	return filepath.Join(prefix, m[c].System)
+	return filepath.Join(prefix, m[c][0])
 }
 
 // NewReader create an io.Reader from file
@@ -99,11 +85,22 @@ func NewReader(f string) *bytes.Buffer {
 }
 
 //overwriteOrRemoveFile Overwrite file with new content or completely remove the file.
-func overwriteOrRemoveFile(file string, text []byte, perm os.FileMode) error {
-	if len(text) == 0 {
-		err := os.Remove(file)
+func overwriteOrRemoveFile(path string, content []byte) error {
+	os.Remove(path)
+	if len(content) == 0 {
+		return nil
+	}
+	f, err := os.Create(path)
+	defer f.Close()
+	if err != nil {
 		return err
 	}
-	err := ioutil.WriteFile(file, text, perm)
-	return err
+	n, err := f.Write(content)
+	if n != len(content) {
+		return fmt.Errorf("not fully written")
+	}
+	if err != nil {
+		return err
+	}
+	return nil
 }

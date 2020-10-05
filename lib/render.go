@@ -39,12 +39,12 @@ func genBitmapLanguagesConfig(cfg sysconfig.SysConfig) string {
 func GenRenderingOptions(userMode bool, cfg sysconfig.SysConfig) {
 	/* # reflect fonts-config syconfig variables or
 	   # parameters in fontconfig setting to control rendering */
-	renderFile := GetConfigLocation("render", userMode)
+	renderFile := GetFcConfig("render", userMode)
 
 	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("Generating %s.", renderFile))
 	renderText := genRenderingOptions(cfg, userMode)
 
-	err := overwriteOrRemoveFile(renderFile, []byte(renderText), 0644)
+	err := overwriteOrRemoveFile(renderFile, []byte(renderText))
 	if err != nil {
 		log.Fatalf("Can not write %s: %s\n", renderFile, err.Error())
 	}
