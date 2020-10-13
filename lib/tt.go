@@ -1,12 +1,10 @@
 package lib
 
 import (
-	"io/ioutil"
-	"reflect"
+	"bytes"
+	"os"
 	"sync"
 
-	"github.com/golang/freetype"
-	"github.com/marguerite/util/fileutils"
 	ft "github.com/openSUSE/fonts-config/font"
 )
 
@@ -20,36 +18,17 @@ func GenTTType(c ft.Collection, userMode bool) {
 	overwriteOrRemoveFile(nonTTFile, []byte(nonTT))
 }
 
-// isHintedFont checks if a font has hinting instructions, for ".ttf" font, it stores
-// builtin hinting instructions in "cvt", "fpgm", "prep" table. fpgm table is the
-// most important table because it's the actual bytecode intepreter virtual machine
-// https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6fpgm.html
-// https://developer.apple.com/fonts/TrueType-Reference-Manual/RM03/Chap3.html
-// for ".otf" fonts, the hinting intelligence is in the rasterizer that Adobe
-// contributed to fontconfig.
-// https://blog.typekit.com/2010/12/02/the-benefits-of-opentypecff-over-truetype/
+// isHintedFont check if a font is truetype/cff by reading sfnt version
 func isHintedFont(font ft.Font) bool {
-	if fileutils.HasPrefixOrSuffix(font.File, ".ttf", ".ttc") != 0 {
-		return ttfHasFpgm(font.File)
-	}
-	if fileutils.HasPrefixOrSuffix(font.File, ".otf", ".otc") != 0 {
+	f, _ := os.Open(font.File)
+	b := make([]byte, 4)
+	f.ReadAt(b, 0)
+	f.Close()
+	if bytes.Equal(b, []byte{00, 01, 00, 00}) {
 		return true
 	}
-	return false
-}
-
-// ttfHasFpgm if .ttf font has fpgm table and content
-func ttfHasFpgm(path string) bool {
-	b, e := ioutil.ReadFile(path)
-	if e != nil {
-		return false
-	}
-	font, e := freetype.ParseFont(b)
-	if e != nil {
-		return false
-	}
-	fpgm := reflect.Indirect(reflect.ValueOf(font)).FieldByName("fpgm")
-	if fpgm.Len() > 0 {
+	switch string(b) {
+	case "true", "ttcf", "OTTO", "otto":
 		return true
 	}
 	return false
