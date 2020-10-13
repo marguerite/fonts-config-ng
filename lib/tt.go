@@ -2,57 +2,22 @@ package lib
 
 import (
 	"io/ioutil"
-	"log"
-	"os/exec"
-	"path/filepath"
 	"reflect"
 	"sync"
 
 	"github.com/golang/freetype"
 	"github.com/marguerite/util/fileutils"
+	ft "github.com/openSUSE/fonts-config/font"
 )
 
 //GenTTType group fonts based on their hinting instructions' existences
-func GenTTType(fonts Collection, userMode bool) {
-	tt, nonTT := genTTType(fonts, userMode)
+func GenTTType(c ft.Collection, userMode bool) {
+	tt, nonTT := genTTType(c, userMode)
 	ttFile := GetFcConfig("tt", userMode)
 	nonTTFile := GetFcConfig("nonTT", userMode)
 
 	overwriteOrRemoveFile(ttFile, []byte(tt))
 	overwriteOrRemoveFile(nonTTFile, []byte(nonTT))
-}
-
-// getFontPaths get all system installed font's paths via fc-list
-func getFontPaths() map[string]string {
-	out, err := exec.Command("/usr/bin/fc-list").Output()
-	if err != nil {
-		log.Fatal("no fc-list found")
-	}
-
-	tmp := []byte{}
-	fonts := make(map[string]string)
-	first := true
-
-	for _, b := range out {
-		if b == ':' {
-			if first {
-				font := string(tmp)
-				if fileutils.HasPrefixOrSuffix(font, ".pcf.gz", ".pfa", ".pfb", ".afm", ".otb") == 0 {
-					fonts[filepath.Base(font)] = filepath.Dir(font)
-				}
-			}
-			tmp = []byte{}
-			first = false
-			continue
-		}
-		if b == '\n' {
-			tmp = []byte{}
-			first = true
-			continue
-		}
-		tmp = append(tmp, b)
-	}
-	return fonts
 }
 
 // isHintedFont checks if a font has hinting instructions, for ".ttf" font, it stores
@@ -63,12 +28,9 @@ func getFontPaths() map[string]string {
 // for ".otf" fonts, the hinting intelligence is in the rasterizer that Adobe
 // contributed to fontconfig.
 // https://blog.typekit.com/2010/12/02/the-benefits-of-opentypecff-over-truetype/
-func isHintedFont(font Font) bool {
+func isHintedFont(font ft.Font) bool {
 	if fileutils.HasPrefixOrSuffix(font.File, ".ttf", ".ttc") != 0 {
-		if val, ok := getFontPaths()[font.File]; ok {
-			return ttfHasFpgm(filepath.Join(val, font.File))
-		}
-		return false
+		return ttfHasFpgm(font.File)
 	}
 	if fileutils.HasPrefixOrSuffix(font.File, ".otf", ".otc") != 0 {
 		return true
@@ -93,20 +55,17 @@ func ttfHasFpgm(path string) bool {
 	return false
 }
 
-func genTTType(fonts Collection, userMode bool) (string, string) {
+func genTTType(c ft.Collection, userMode bool) (string, string) {
 	tt := genFcPreamble(userMode, "<!-- TT instructed fonts installed on your system. Maybe CFF/PostScript based or Truetype based. -->")
 	nontt := genFcPreamble(userMode, "<!-- NON TT instructed fonts installed on your system.-->")
 
 	wg := sync.WaitGroup{}
-	wg.Add(len(fonts))
+	wg.Add(len(c))
 	mux := sync.Mutex{}
-	ch := make(chan struct{}, 100) // ch is a chan to avoid "too many open files" when os exec
 
-	for _, font := range fonts {
-		go func(f Font, tt, nontt *string) {
+	for _, font := range c {
+		go func(f ft.Font, tt, nontt *string) {
 			defer wg.Done()
-			defer func() { <-ch }() // release chan
-			ch <- struct{}{}        // acquire chan
 
 			hint := isHintedFont(f)
 

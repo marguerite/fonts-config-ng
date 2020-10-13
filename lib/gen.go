@@ -3,6 +3,8 @@ package lib
 import (
 	"log"
 	"strconv"
+
+	ft "github.com/openSUSE/fonts-config/font"
 )
 
 // genFcPreamble generate fontconfig preamble
@@ -50,9 +52,9 @@ func genBlacklistConfig(b Blacklist) string {
 	return config
 }
 
-func genDualAisanConfig(f Font) string {
+func genDualAisanConfig(font ft.Font) string {
 	config := ""
-	for _, name := range f.Name {
+	for _, name := range font.Name {
 		config += "\t<match target=\"font\">\n\t\t<test name=\"family\" compare=\"contains\">\n\t\t\t<string>"
 		config += name
 		config += "</string>\n\t\t</test>\n"
@@ -62,7 +64,7 @@ func genDualAisanConfig(f Font) string {
 	return config
 }
 
-func genCJKMatrixConfig(fontName string, matrix []float64, nameLangs []string, fonts Collection) string {
+func genCJKMatrixConfig(fontName string, matrix []float64, nameLangs []string, c ft.Collection) string {
 	config := ""
 
 	if len(matrix) != 4 {
@@ -70,7 +72,7 @@ func genCJKMatrixConfig(fontName string, matrix []float64, nameLangs []string, f
 	}
 
 	// generate nothing for non-installed fonts
-	if len(fonts.FindByName(fontName)) <= 0 {
+	if len(c.FindByName(fontName)) <= 0 {
 		return config
 	}
 
@@ -88,7 +90,7 @@ func genCJKMatrixConfig(fontName string, matrix []float64, nameLangs []string, f
 	return config
 }
 
-func genCJKWeightConfig(fontName string, weights [][]int, nameLangs []string, fonts Collection) string {
+func genCJKWeightConfig(fontName string, weights [][]int, nameLangs []string, c ft.Collection) string {
 	config := ""
 
 	for _, w := range weights {
@@ -97,7 +99,7 @@ func genCJKWeightConfig(fontName string, weights [][]int, nameLangs []string, fo
 		}
 	}
 
-	if len(fonts.FindByName(fontName)) <= 0 {
+	if len(c.FindByName(fontName)) <= 0 {
 		return config
 	}
 
@@ -121,14 +123,14 @@ func genCJKWeightConfig(fontName string, weights [][]int, nameLangs []string, fo
 	return config
 }
 
-func genCJKWidthConfig(fontName string, widths []int, nameLangs []string, fonts Collection) string {
+func genCJKWidthConfig(fontName string, widths []int, nameLangs []string, c ft.Collection) string {
 	config := ""
 
 	if len(widths) != 2 {
 		log.Fatalf("invalid weight item: %v", widths)
 	}
 
-	if len(fonts.FindByName(fontName)) <= 0 {
+	if len(c.FindByName(fontName)) <= 0 {
 		return config
 	}
 

@@ -6,15 +6,16 @@ import (
 	"sync"
 
 	fccharset "github.com/openSUSE/fonts-config/fc-charset"
+	ft "github.com/openSUSE/fonts-config/font"
 	"github.com/openSUSE/fonts-config/sysconfig"
 )
 
 // getEmojiFonts get all system emoji fonts
-func getEmojiFonts(c Collection) Collection {
-	c1 := Collection{}
-	for _, font := range c {
-		if font.IsEmoji() {
-			c1 = append(c1, font)
+func getEmojiFonts(c ft.Collection) ft.Collection {
+	c1 := ft.Collection{}
+	for _, ft := range c {
+		if ft.IsEmoji() {
+			c1 = append(c1, ft)
 		}
 	}
 	return c1
@@ -29,7 +30,7 @@ type Blacklist struct {
 // GenEmojiBlacklist generate 81-emoji-blacklist-glyphs.conf
 // 1. blacklist charsets < 200d in emoji fonts, they are everywhere and non-emoji
 // 2. balcklist emoji unicode codepoints in other fonts
-func GenEmojiBlacklist(collection Collection, userMode bool, cfg sysconfig.SysConfig) {
+func GenEmojiBlacklist(collection ft.Collection, userMode bool, cfg sysconfig.SysConfig) {
 	emojis := getEmojiFonts(collection)
 
 	// no emoji fonts on the system
@@ -42,12 +43,12 @@ func GenEmojiBlacklist(collection Collection, userMode bool, cfg sysconfig.SysCo
 	var emojiConf, nonEmojiConf string
 	var charset fccharset.Charset
 
-	for _, font := range emojis {
+	for _, ft := range emojis {
 		c := fccharset.Charset{}
 		c1 := fccharset.Charset{}
 
 		// select CharsetRange < 200d
-		for _, v := range font.Charset {
+		for _, v := range ft.Charset {
 			if v.Max < 8205 {
 				c.Append(v)
 			} else {
@@ -60,9 +61,9 @@ func GenEmojiBlacklist(collection Collection, userMode bool, cfg sysconfig.SysCo
 		// black'em
 		if len(c) > 0 {
 			b := Blacklist{}
-			b.Name = font.Name[0]
-			if len(font.Name) > 1 {
-				b.Name = font.Name[len(font.Name)-1]
+			b.Name = ft.Name[0]
+			if len(ft.Name) > 1 {
+				b.Name = ft.Name[len(ft.Name)-1]
 			}
 			b.Charset = c
 			emojiConf += genBlacklistConfig(b)
@@ -74,14 +75,11 @@ func GenEmojiBlacklist(collection Collection, userMode bool, cfg sysconfig.SysCo
 	wg := sync.WaitGroup{}
 	wg.Add(len(collection) - len(emojis))
 	mux := sync.Mutex{}
-	ch := make(chan struct{}, 100) // ch is a chan to avoid "too many open files" when os exec
 
 	for _, font := range collection {
 		if !font.IsEmoji() {
-			go func(f Font, verbosity int) {
+			go func(f ft.Font, verbosity int) {
 				defer wg.Done()
-				defer func() { <-ch }() // release chan
-				ch <- struct{}{}        // acquire chan
 				in := f.Charset.Intersect(charset)
 
 				if len(in) > 0 {

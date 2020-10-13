@@ -4,11 +4,12 @@ import (
 	"strings"
 
 	"github.com/marguerite/util/slice"
+	ft "github.com/openSUSE/fonts-config/font"
 )
 
 //GenCJKConfig generate cjk specific fontconfig configuration like
 // special matrix adjustment for "Noto Sans/Serif", dual-width Asian fonts and etc.
-func GenCJKConfig(availFonts Collection, userMode bool) {
+func GenCJKConfig(availFonts ft.Collection, userMode bool) {
 	conf := GetFcConfig("cjk", userMode)
 	text := genFcPreamble(userMode, "")
 	text += fixDualAsianFonts(availFonts, userMode)
@@ -20,7 +21,7 @@ func GenCJKConfig(availFonts Collection, userMode bool) {
 }
 
 //isSpacingDual find spacing=dual/mono/charcell
-func isSpacingDual(font Font) int {
+func isSpacingDual(font ft.Font) int {
 	if font.Spacing > 90 && !font.Outline {
 		return 1
 	}
@@ -31,7 +32,7 @@ func isSpacingDual(font Font) int {
 }
 
 //isCJKFont find if a font supports CJK
-func isCJKFont(font Font) bool {
+func isCJKFont(font ft.Font) bool {
 	supportedLangs := []string{"zh", "ja", "ko", "zh-cn", "zh-tw", "zh-hk", "zh-mo", "zh-sg"}
 	if ok, err := slice.Contains(font.Lang, supportedLangs); ok && err == nil {
 		return true
@@ -40,7 +41,7 @@ func isCJKFont(font Font) bool {
 }
 
 //fixDualAsianFonts fix rendering of dual-width Asian fonts (spacing=dual)
-func fixDualAsianFonts(availFonts Collection, userMode bool) string {
+func fixDualAsianFonts(availFonts ft.Collection, userMode bool) string {
 	comment := "<!-- The dual-width Asian fonts (spacing=dual) are not rendered correctly," +
 		"apparently FreeType forces all widths to match.\n" +
 		"Trying to disable the width forcing code by setting globaladvance=false alone doesn't help.\n" +
@@ -60,7 +61,7 @@ func fixDualAsianFonts(availFonts Collection, userMode bool) string {
 	return text
 }
 
-func tweakNotoSansSerif(availFonts Collection) string {
+func tweakNotoSansSerif(availFonts ft.Collection) string {
 	nameLangs := []string{"zh-CN", "zh-SG", "zh-TW", "zh-HK", "zh-MO", "ja", "ko"}
 	matrix := []float64{0.67, 0, 0, 0.67}
 	weights := [][]int{{0, 40, 0}, {50, 99, 50}, {99, 179, 80}, {180, 0, 180}}
@@ -84,7 +85,7 @@ func tweakNotoSansSerif(availFonts Collection) string {
 	return text
 }
 
-func aliasNotoCJKOTC(availFonts Collection) string {
+func aliasNotoCJKOTC(availFonts ft.Collection) string {
 	comment := "<!-- Alias 'Noto Sans/Serif CJK SC/TC/JP/KR' since they may not installed. -->\n\n"
 	text := ""
 	otcSuffix := []string{" JP", " KR", " SC", " TC"}
@@ -110,7 +111,7 @@ func aliasNotoCJKOTC(availFonts Collection) string {
 	return text
 }
 
-func aliasSourceHan(availFonts Collection) string {
+func aliasSourceHan(availFonts ft.Collection) string {
 	comment := "<!--- Alias 'Adobe Source Han Sans/Serif/Sans HW' since its CJK part is the same as Noto Sans/Serif.\n" +
 		"\t1. We don't need to prepend Source Sans/Serif Pro, since the Latin part has already been.\n" +
 		"\t2. If installed manually they can still be used.-->\n\n"
@@ -134,7 +135,7 @@ func aliasSourceHan(availFonts Collection) string {
 	return text
 }
 
-func genSourceHanAliasConfig(generic, suffix string, otc bool, availFonts Collection) string {
+func genSourceHanAliasConfig(generic, suffix string, otc bool, availFonts ft.Collection) string {
 	fontName := "Source Han " + generic + suffix
 	hw := strings.Contains(fontName, " HW")
 	sufMap := map[string]string{" CN": " SC", " TW": " TC", " J": " JP", " K": " KR"}

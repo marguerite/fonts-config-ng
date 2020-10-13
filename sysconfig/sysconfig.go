@@ -81,6 +81,12 @@ func (sys SysConfig) Unmarshal(f io.Reader) {
 		if len(arr) > 1 {
 			val, err := strconv.Atoi(arr[1])
 			if err != nil {
+				switch arr[1] {
+				case "yes":
+					arr[1] = "true"
+				case "no":
+					arr[1] = "false"
+				}
 				b, err1 := strconv.ParseBool(arr[1])
 				if err1 != nil {
 					sys[arr[0]] = arr[1]

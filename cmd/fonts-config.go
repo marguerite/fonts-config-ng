@@ -11,6 +11,7 @@ import (
 
 	"github.com/marguerite/util/dir"
 	"github.com/marguerite/util/slice"
+	"github.com/openSUSE/fonts-config/font"
 	"github.com/openSUSE/fonts-config/lib"
 	"github.com/openSUSE/fonts-config/sysconfig"
 	"github.com/urfave/cli"
@@ -215,7 +216,7 @@ func main() {
 			# changed in /etc/fonts after calling fc-cache, fontconfig
 			# will think that the cache files are out of date again. */
 
-		collection := lib.NewCollection()
+		collection := font.NewCollection()
 		lib.GenTTType(collection, c.Bool("u"))
 		lib.GenRenderingOptions(c.Bool("u"), cfg)
 		lib.GenFamilyPreferenceLists(c.Bool("u"), cfg)
@@ -227,7 +228,7 @@ func main() {
 			lib.FcCache(cfg.Int("VERBOSITY"))
 			lib.FpRehash(cfg.Int("VERBOSITY"))
 			if cfg.Bool("GENERATE_JAVA_FONT_SETUP") {
-				lib.GenerateJavaFontSetup(cfg.Int("VERBOSITY"))
+				lib.GenerateJavaFontSetup(collection, cfg)
 			}
 			lib.ReloadXfsConfig(cfg.Int("VERBOSITY"))
 		}

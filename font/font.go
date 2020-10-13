@@ -1,8 +1,10 @@
-package lib
+package font
 
 import (
 	"fmt"
+	"log"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -18,6 +20,7 @@ type Collection []Font
 
 // NewCollection Initialize a new collection of Font from system installed fonts queried by fc-cat.
 func NewCollection() Collection {
+	paths := getFontPaths()
 	out, err := exec.Command("/usr/bin/fc-cat").Output()
 	if err != nil {
 		panic(err)
@@ -37,7 +40,7 @@ func NewCollection() Collection {
 			// reject directory and font format usually not used for display
 			if fileutils.HasPrefixOrSuffix(i, ".dir", ".pcf.gz", ".pfa", ".pfb", ".afm", ".otb") == 0 {
 				// Multi thread here
-				NewFont(&font, i)
+				NewFont(&font, i, paths)
 			}
 
 		}
@@ -84,7 +87,7 @@ type Font struct {
 }
 
 // NewFont generate a new Font structure from input string
-func NewFont(font *Font, in string) {
+func NewFont(font *Font, in string, paths map[string]string) {
 	// parse Filename or other information
 	if strings.Contains(in, ":") {
 		for idx, i := range strings.Split(in, ":") {
@@ -118,7 +121,7 @@ func NewFont(font *Font, in string) {
 			}
 		}
 	} else {
-		font.File = in
+		font.File = paths[in]
 	}
 }
 
@@ -154,4 +157,37 @@ func getMatchedFontName(names []string, restricts ...interface{}) ([]string, err
 		}
 	}
 	return []string{}, fmt.Errorf("no matched name found")
+}
+
+// getFontPaths get all system installed font's paths via fc-list
+func getFontPaths() map[string]string {
+	out, err := exec.Command("/usr/bin/fc-list").Output()
+	if err != nil {
+		log.Fatal("no fc-list found")
+	}
+
+	tmp := []byte{}
+	fonts := make(map[string]string)
+	first := true
+
+	for _, b := range out {
+		if b == ':' {
+			if first {
+				font := string(tmp)
+				if fileutils.HasPrefixOrSuffix(font, ".pcf.gz", ".pfa", ".pfb", ".afm", ".otb") == 0 {
+					fonts[filepath.Base(font)] = font
+				}
+			}
+			tmp = []byte{}
+			first = false
+			continue
+		}
+		if b == '\n' {
+			tmp = []byte{}
+			first = true
+			continue
+		}
+		tmp = append(tmp, b)
+	}
+	return fonts
 }

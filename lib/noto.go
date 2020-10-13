@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/marguerite/util/slice"
+	ft "github.com/openSUSE/fonts-config/font"
 )
 
 type LFPLs []LFPL
@@ -156,22 +157,22 @@ func (l *CandidateList) Add(font, lang string) {
 }
 
 //GenNotoConfig generate fontconfig for Noto Fonts
-func GenNotoConfig(fonts Collection, userMode bool) {
-	fonts = fonts.FindByName("Noto")
-	family := genNotoDefaultFamily(fonts, userMode)
-	lfpl := genNotoConfig(fonts, userMode)
+func GenNotoConfig(c ft.Collection, userMode bool) {
+	c = c.FindByName("Noto")
+	family := genNotoDefaultFamily(c, userMode)
+	lfpl := genNotoConfig(c, userMode)
 	faPos := GetFcConfig("notoDefault", userMode)
 	lfplPos := GetFcConfig("notoPrefer", userMode)
 	overwriteOrRemoveFile(faPos, []byte(family))
 	overwriteOrRemoveFile(lfplPos, []byte(lfpl))
 }
 
-func genNotoDefaultFamily(fonts Collection, userMode bool) string {
+func genNotoDefaultFamily(c ft.Collection, userMode bool) string {
 	str := genFcPreamble(userMode, "<!-- Default families for Noto Fonts installed on your system.-->")
 	// font names across different font.Name may be equal.
 	m := make(map[string]struct{})
 
-	for _, font := range fonts {
+	for _, font := range c {
 		for _, name := range font.Name {
 			if _, ok := m[name]; !ok {
 				m[name] = struct{}{}
@@ -185,7 +186,7 @@ func genNotoDefaultFamily(fonts Collection, userMode bool) string {
 	return str
 }
 
-func genNotoConfig(fonts Collection, userMode bool) string {
+func genNotoConfig(c ft.Collection, userMode bool) string {
 	lfpl := LFPLs{}
 
 	nonLangFonts := []string{"Noto Sans", "Noto Sans Display",
@@ -193,14 +194,14 @@ func genNotoConfig(fonts Collection, userMode bool) string {
 		"Noto Serif", "Noto Serif Display",
 		"Noto Mono", "Noto Emoji", "Noto Color Emoji"}
 
-	for _, font := range fonts {
+	for _, font := range c {
 		if b, err := slice.Contains(font.Name, nonLangFonts); !b && err == nil {
 			for _, lang := range font.Lang {
 				lfpl.AddFont(lang, font.Name[0], strings.Title(getGenericFamily(font.Name[0])), "Default")
 			}
 		}
 	}
-	completeCJK(&lfpl, fonts)
+	completeCJK(&lfpl, c)
 
 	return genFcPreamble(userMode, "<!-- Language specific family preference list for Noto Fonts installed on your system.-->") +
 		lfpl.GenLFPLsConfig() +
@@ -269,7 +270,7 @@ func getGenericFamily(name string) string {
 	return "sans"
 }
 
-func completeCJK(lfpl *LFPLs, c Collection) {
+func completeCJK(lfpl *LFPLs, c ft.Collection) {
 	for i, v := range *lfpl {
 		switch v.Lang {
 		case "zh-cn", "zh-sg":
@@ -455,7 +456,7 @@ func completeCJK(lfpl *LFPLs, c Collection) {
 	}
 }
 
-func genAllVariantsAlternative(font string, c Collection) string {
+func genAllVariantsAlternative(font string, c ft.Collection) string {
 	f := strings.Split(font, " ")
 	name := strings.Join(f[:2], " ") + " CJK " + f[len(f)-1]
 	if len(c.FindByName(name)) > 0 {
@@ -464,7 +465,7 @@ func genAllVariantsAlternative(font string, c Collection) string {
 	return ""
 }
 
-func genCJKPrependML(generic, lang string, c Collection) CandidateList {
+func genCJKPrependML(generic, lang string, c ft.Collection) CandidateList {
 	m := CandidateList{}
 	if generic == "Sans" || generic == "Serif" {
 		m = append(m, "Noto "+generic)
@@ -480,7 +481,7 @@ func genCJKPrependML(generic, lang string, c Collection) CandidateList {
 	return CandidateList(m1)
 }
 
-func genCJKAppendML(generic, lang string, c Collection) CandidateList {
+func genCJKAppendML(generic, lang string, c ft.Collection) CandidateList {
 	m := CandidateList{}
 	ko := map[string]string{"Sans": "NanumGothic", "Serif": "NanumMyeongjo", "Monospace": "NanumGothicCoding"}
 	ja := map[string]string{"Sans": "IPAGothic", "Serif": "IPAMincho"}

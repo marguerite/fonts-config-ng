@@ -3,89 +3,28 @@ package lib
 import (
 	"bufio"
 	"fmt"
-	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strings"
 
-	"github.com/marguerite/util/command"
-	"github.com/marguerite/util/fileutils"
-	"github.com/marguerite/util/slice"
+	ft "github.com/openSUSE/fonts-config/font"
+	"github.com/openSUSE/fonts-config/sysconfig"
 )
 
-// FontCandidates a struct containing family preference list for a generic font name for a specific CJK language
-type FontCandidates struct {
-	GenericName string
-	Lang        string
-	FPL         []string
-}
-
-// JavaFontProperty a struct containing font's path and XLFD
-type JavaFontProperty struct {
-	Path string
-	XLFD string
-}
-
-// JavaFont a struct containing font's name and JavaFontProperty
-type JavaFont struct {
-	Name string
-	JavaFontProperty
-}
-
-// JavaFonts a slice of JavaFont
-type JavaFonts []JavaFont
-
-// FindByName finds a JavaFont struct by its Name property
-func (f JavaFonts) FindByName(name string) (JavaFont, bool) {
-	if strings.HasPrefix(name, "_") {
-		name = strings.TrimPrefix(name, "_")
+var (
+	DEFAULT_JAVA_FONTS = map[string][]string{
+		"SANS_JAPANESE":             []string{"/usr/share/fonts/truetype/sazanami-gothic.ttf", "-misc-sazanami gothic-"},
+		"SERIF_JAPANESE":            []string{"/usr/share/fonts/truetype/sazanami-mincho.ttf", "-misc-sazanami mincho-"},
+		"MONO_JAPANESE":             []string{"/usr/share/fonts/truetype/sazanami-gothic.ttf", "-misc-sazanami gothic-"},
+		"SANS_SIMPLIFIED_CHINESE":   []string{"/usr/share/fonts/truetype/gbsn001p.ttf", "-arphic-ar pl sungtil gb-"},
+		"SERIF_SIMPLIFIED_CHINESE":  []string{"/usr/share/fonts/truetype/gbsn001p.ttf", "-arphic-ar pl sungtil gb-"},
+		"SANS_TRADITIONAL_CHINESE":  []string{"/usr/share/fonts/truetype/bsmi001p.ttf", "-arphic-ar pl mingti2l big5-"},
+		"SERIF_TRADITIONAL_CHINESE": []string{"/usr/share/fonts/truetype/bsmi001p.ttf", "-arphic-ar pl mingti2l big5-"},
+		"SANS_KOREAN":               []string{"/usr/share/fonts/truetype/dotum.ttf", "-baekmukttf-dotum-"},
+		"SERIF_KOREAN":              []string{"/usr/share/fonts/truetype/batang.ttf", "-baekmukttf-batang-"},
 	}
 
-	if strings.HasSuffix(name, "_") {
-		name = strings.TrimSuffix(name, "_")
-	}
-
-	for _, v := range f {
-		if v.Name == name {
-			return v, true
-		}
-	}
-	return JavaFont{"", JavaFontProperty{"", ""}}, false
-}
-
-// generatePresetCJKJavaFonts generate a JavaFonts slice with openSUSE default CJK choices for Java
-func getPresetJavaFonts() JavaFonts {
-	return JavaFonts{
-		JavaFont{"sans_japanese", JavaFontProperty{"/usr/share/fonts/truetype/sazanami-gothic.ttf", "-misc-sazanami gothic-"}},
-		JavaFont{"serif_japanese", JavaFontProperty{"/usr/share/fonts/truetype/sazanami-mincho.ttf", "-misc-sazanami mincho-"}},
-		JavaFont{"mono_japanese", JavaFontProperty{"/usr/share/fonts/truetype/sazanami-gothic.ttf", "-misc-sazanami gothic-"}},
-		JavaFont{"sans_simplified_chinese", JavaFontProperty{"/usr/share/fonts/truetype/gbsn001p.ttf", "-arphic-ar pl sungtil gb-"}},
-		JavaFont{"serif_simplified_chinese", JavaFontProperty{"/usr/share/fonts/truetype/gbsn001p.ttf", "-arphic-ar pl sungtil gb-"}},
-		JavaFont{"sans_traditional_chinese", JavaFontProperty{"/usr/share/fonts/truetype/bsmi001p.ttf", "-arphic-ar pl mingti2l big5-"}},
-		JavaFont{"serif_traditional_chinese", JavaFontProperty{"/usr/share/fonts/truetype/bsmi001p.ttf", "-arphic-ar pl mingti2l big5-"}},
-		JavaFont{"sans_korean", JavaFontProperty{"/usr/share/fonts/truetype/dotum.ttf", "-baekmukttf-dotum-"}},
-		JavaFont{"serif_korean", JavaFontProperty{"/usr/share/fonts/truetype/batang.ttf", "-baekmukttf-batang-"}},
-	}
-}
-
-// trimEndingColon removes whitespaces and the ending colon in font path
-func trimEndingColon(path string) string {
-	path = strings.TrimSpace(path)
-	path = strings.Replace(path, ":", "", -1)
-	return path
-}
-
-func fclistArgToFontName(name string) string {
-	re := regexp.MustCompile(`^(.*?):.*$`)
-	if re.MatchString(name) {
-		return re.FindStringSubmatch(name)[1]
-	}
-	return name
-}
-
-func getJavaXlfdByName(name string) string {
-	xlfds := map[string]string{"MS Gothic": "-ricoh-ms gothic-",
+	DEFAULT_JAVA_XLFDS = map[string]string{"MS Gothic": "-ricoh-ms gothic-",
 		"HGGothicB":            "-ricoh-hggothicb-",
 		"IPAGothic":            "-misc-ipagothic-",
 		"IPAPGothic":           "-misc-ipapgothic-",
@@ -111,159 +50,114 @@ func getJavaXlfdByName(name string) string {
 		"Noto Sans TC":         "-goog-noto sans tc-",
 		"Noto Sans KR":         "-goog-noto sans kr-"}
 
-	if str, ok := xlfds[name]; ok {
+	DEFAULT_JAVA_FPL = map[string][]string{
+		"SANS_JAPANESE":             []string{"MS Gothic", "HGGothicB", "IPAPGothic", "IPAexGothic", "Sazanami Gothic"},
+		"SERIF_JAPANESE":            []string{"MS Mincho", "HGMinchoL", "IPAPMincho", "IPAexMincho", "Sazanami Mincho"},
+		"MONO_JAPANESE":             []string{"MS Gothic", "HGGothicB", "IPAGothic", "Sazanamii Gothic"},
+		"SANS_SIMPLIFIED_CHINESE":   []string{"Noto Sans SC:style=Regular:weight=80", "FZsongTi", "AR PL ShanHeiSun Uni", "AR PL SungtiL GB"},
+		"SERIF_SIMPLIFIED_CHINESE":  []string{"Noto Serif SC:style=Regular:weight=80", "FZsongTi", "AR PL ShanHeiSun Uni", "AR PL SungtiL GB"},
+		"SANS_TRADITIONAL_CHINESE":  []string{"Noto Sans TC:style=Regular:weight=80", "AR PL ShanHeiSun Uni", "FZMingTiB", "AR PL Mingti2L Big5"},
+		"SERIF_TRADITIONAL_CHINESE": []string{"Noto Serif TC:style=Regular:weight=80", "AR PL ShanHeiSun Uni", "FZMingTiB", "AR PL Mingti2L Big5"},
+		"SANS_KOREAN":               []string{"Noto Sans KR:style=Regular:weight=80", "UnDotum", "Baekmuk Gulim", "Baekmuk Dotum"},
+		"SERIF_KOREAN":              []string{"Noto Serif KR:style=Regular:weight=80", "UnBatang", "Baekmuk Batang"},
+		"SANS_LATIN1":               []string{"DejaVu Sans:style=Book:width=100", "Liberation Sans:style=Regular", "Droid Sans:style=Regular"},
+		"SERIF_LATIN1":              []string{"DejaVu Serif:style=Book:width=100", "Liberation Serif:style=Regular", "Droid Serif:style=Regular"},
+		"MONO_LATIN1":               []string{"DejaVu Sans Mono:style=Book", "Liberation Mono:style=Regular", "Droid Sans Mono:style=Regular"},
+	}
+
+	XLFD_REGEX = regexp.MustCompile(`_(\w+_\w+(_\w+_)?)_XLFD_(\w+_\w+_)?`)
+	FILE_REGEX = regexp.MustCompile(`_(\w+_\w+(_\w+_)?)_FILE_`)
+)
+
+func getJavaXLFD(name string) string {
+	if str, ok := DEFAULT_JAVA_XLFDS[name]; ok {
 		return str
 	}
 	return "-misc-" + strings.ToLower(name) + "-"
 }
 
-func substituteSpaceInJavaXLFD(xlfd string) string {
-	return strings.Replace(xlfd, " ", "_", -1)
-}
+// GenerateJavaFontSetup generates fontconfig properties conf for java
+func GenerateJavaFontSetup(c ft.Collection, cfg sysconfig.SysConfig) error {
+	Dbg(cfg.Int("VERBOSITY"), Verbose, "Generating java font setup ...\n")
 
-// getInstalledFontNameAndPathFromList selects a font both in the list and installed on your system for Java
-// fc-list should return only one result otherwise last one is taken in present
-func getInstalledFontNameAndPathFromList(lst FontCandidates, verbosity int) JavaFontProperty {
-	fontfile := ""
-	fontname := ""
+	tmpl := NewReader("/usr/share/fonts-config/fontconfig.SUSE.properties.template")
 
-	for _, font := range lst.FPL {
-		if out, stat, err := command.Run("/usr/bin/fc-list", font, "file"); stat == 0 && err == nil {
-			for _, f := range strings.Split(trimEndingColon(out), "\n") {
-				if fileutils.HasPrefixOrSuffix(f, ".ttf", ".ttc", ".otf", ".otc") != 0 {
-					if info, _ := os.Stat(f); info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 {
-						fontfile = f
-						fontname = fclistArgToFontName(font)
-						break
-					}
-				}
-			}
-		}
-	}
-
-	if len(fontfile) == 0 {
-		Dbg(verbosity, Debug, fmt.Sprintf(" warning: cannot find a %s %s font, %s might not work in Java.\n", lst.Lang, lst.GenericName, lst.Lang))
-		return JavaFontProperty{"", ""}
-	}
-	return JavaFontProperty{fontfile, getJavaXlfdByName(fontname)}
-}
-
-// overrideOrAppendJavaFont override existing JavaFont in JavaFonts or append to it.
-func overrideOrAppendJavaFont(f *JavaFonts, genericFont JavaFont) {
-	if len(genericFont.Path) > 0 {
-		notFound := true
-		v := reflect.ValueOf(f).Elem()
-		for i := 0; i < v.Len(); i++ {
-			if reflect.DeepEqual(v.Index(i).FieldByName("Name").Interface(), reflect.ValueOf(genericFont).FieldByName("Name").Interface()) {
-				slice.Replace(f, v.Index(i), genericFont)
-				notFound = false
+	fonts := make(map[string][]string)
+	re := regexp.MustCompile(`([^:]+)(:.*)?$`)
+	for k, v := range DEFAULT_JAVA_FPL {
+		found := false
+		for _, font := range v {
+			c1 := c.FindByName(re.ReplaceAllString(font, `$1`))
+			if len(c1) > 0 {
+				fonts[k] = []string{c1[0].File, getJavaXLFD(c1[0].Name[0])}
+				found = true
 				break
 			}
 		}
-		if notFound {
-			slice.Concat(f, genericFont)
+		if !found {
+			if val, ok := DEFAULT_JAVA_FONTS[k]; ok {
+				fonts[k] = val
+			}
 		}
 	}
-}
 
-// GenerateJavaFontSetup generates fontconfig properties conf for java
-func GenerateJavaFontSetup(verbosity int) error {
-	Dbg(verbosity, Verbose, "generating java font setup ...\n")
-
-	template := "/usr/share/fonts-config/fontconfig.SUSE.properties.template"
-
-	sansJP := FontCandidates{"sans serif", "Japanese", []string{"MS Gothic", "HGGothicB", "IPAPGothic", "IPAexGothic", "Sazanami Gothic"}}
-	serifJP := FontCandidates{"serif", "Japanese", []string{"MS Mincho", "HGMinchoL", "IPAPMincho", "IPAexMincho", "Sazanami Mincho"}}
-	monoJP := FontCandidates{"monospace", "Japanese", []string{"MS Gothic", "HGGothicB", "IPAGothic", "Sazanamii Gothic"}}
-	sansSC := FontCandidates{"sans serif", "Simplified Chinese", []string{"Noto Sans SC:style=Regular:weight=80", "FZsongTi", "AR PL ShanHeiSun Uni", "AR PL SungtiL GB"}}
-	serifSC := FontCandidates{"serif", "Simplified Chinese", []string{"Noto Serif SC:style=Regular:weight=80", "FZsongTi", "AR PL ShanHeiSun Uni", "AR PL SungtiL GB"}}
-	sansTC := FontCandidates{"sans serif", "Traditional Chinese", []string{"Noto Sans TC:style=Regular:weight=80", "AR PL ShanHeiSun Uni", "FZMingTiB", "AR PL Mingti2L Big5"}}
-	serifTC := FontCandidates{"serif", "Traditional Chinese", []string{"Noto Serif TC:style=Regular:weight=80", "AR PL ShanHeiSun Uni", "FZMingTiB", "AR PL Mingti2L Big5"}}
-	sansKR := FontCandidates{"sans serif", "Korean", []string{"Noto Sans KR:style=Regular:weight=80", "UnDotum", "Baekmuk Gulim", "Baekmuk Dotum"}}
-	serifKR := FontCandidates{"serif", "Korean", []string{"Noto Serif KR:style=Regular:weight=80", "UnBatang", "Baekmuk Batang"}}
-	sansLatin1 := FontCandidates{"sans serif", "Latin 1", []string{"DejaVu Sans:style=Book:width=100", "Liberation Sans:style=Regular", "Droid Sans:style=Regular"}}
-	serifLatin1 := FontCandidates{"serif", "Latin 1", []string{"DejaVu Serif:style=Book:width=100", "Liberation Serif:style=Regular", "Droid Serif:style=Regular"}}
-	monoLatin1 := FontCandidates{"monospace", "Latin 1", []string{"DejaVu Sans Mono:style=Book", "Liberation Mono:style=Regular", "Droid Sans Mono:style=Regular"}}
-
-	fonts := getPresetJavaFonts()
-	overrideOrAppendJavaFont(&fonts, JavaFont{"sans_japanese", getInstalledFontNameAndPathFromList(sansJP, verbosity)})
-	overrideOrAppendJavaFont(&fonts, JavaFont{"serif_japanese", getInstalledFontNameAndPathFromList(serifJP, verbosity)})
-	overrideOrAppendJavaFont(&fonts, JavaFont{"mono_japanese", getInstalledFontNameAndPathFromList(monoJP, verbosity)})
-	overrideOrAppendJavaFont(&fonts, JavaFont{"sans_simplified_chinese", getInstalledFontNameAndPathFromList(sansSC, verbosity)})
-	overrideOrAppendJavaFont(&fonts, JavaFont{"serif_simplified_chinese", getInstalledFontNameAndPathFromList(serifSC, verbosity)})
-	overrideOrAppendJavaFont(&fonts, JavaFont{"sans_traditional_chinese", getInstalledFontNameAndPathFromList(sansTC, verbosity)})
-	overrideOrAppendJavaFont(&fonts, JavaFont{"serif_traditional_chinese", getInstalledFontNameAndPathFromList(serifTC, verbosity)})
-	overrideOrAppendJavaFont(&fonts, JavaFont{"sans_korean", getInstalledFontNameAndPathFromList(sansKR, verbosity)})
-	overrideOrAppendJavaFont(&fonts, JavaFont{"serif_korean", getInstalledFontNameAndPathFromList(serifKR, verbosity)})
-	overrideOrAppendJavaFont(&fonts, JavaFont{"sans_latin1", getInstalledFontNameAndPathFromList(sansLatin1, verbosity)})
-	overrideOrAppendJavaFont(&fonts, JavaFont{"serif_latin1", getInstalledFontNameAndPathFromList(serifLatin1, verbosity)})
-	overrideOrAppendJavaFont(&fonts, JavaFont{"mono_latin1", getInstalledFontNameAndPathFromList(monoLatin1, verbosity)})
-
-	Dbg(verbosity, Debug, func(javaFonts JavaFonts) string {
-		str := ""
-		for _, javaFont := range javaFonts {
-			str += fmt.Sprintf("%s_file=%s\n", javaFont.Name, javaFont.Path)
-			str += fmt.Sprintf("%s_xlfd=%s\n", javaFont.Name, javaFont.XLFD)
-			str += fmt.Sprintf("%s_xlfd_no_space=%s\n", javaFont.Name, substituteSpaceInJavaXLFD(javaFont.XLFD))
+	Dbg(cfg.Int("VERBOSITY"), Debug, func(fonts map[string][]string) string {
+		var str string
+		for k, v := range fonts {
+			str += fmt.Sprintf("%s_file=%s\n", k, v[0])
+			str += fmt.Sprintf("%s_xlfd=%s\n", k, v[1])
+			str += fmt.Sprintf("%s_xlfd_no_space=%s\n", k, strings.ReplaceAll(v[1], " ", "_"))
 		}
 		return str
 	}, fonts)
 
-	tmpl, err := os.Open(template)
-	if err != nil {
-		return err
-	}
-	defer tmpl.Close()
-
 	scanner := bufio.NewScanner(tmpl)
-	scanner.Split(bufio.ScanLines)
-	xlfdRe := regexp.MustCompile(`_(\w+_\w+(_\w+_)?)_XLFD_(\w+_\w+_)?`)
-	fileRe := regexp.MustCompile(`_(\w+_\w+(_\w+_)?)_FILE_`)
 
-	javaText := ""
+	var text string
 
 	for scanner.Scan() {
 		line := scanner.Text()
 		if len(line) == 0 {
-			javaText += "\n"
+			text += "\n"
 		}
 		if strings.Contains(line, "_XLFD_") {
-			m := xlfdRe.FindStringSubmatch(line)
-			font, ok := fonts.FindByName(strings.ToLower(m[1]))
+			m := XLFD_REGEX.FindStringSubmatch(line)
+			val, ok := fonts[m[1]]
 			if !ok {
-				Dbg(verbosity, Debug, fmt.Sprintf("cannot find value for %s to replace.\n", m[0]))
+				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("cannot find value for %s to replace.\n", m[0]))
 				continue
 			}
 			if m[len(m)-1] == "NO_SPACE_" {
-				line = strings.Replace(line, m[0], substituteSpaceInJavaXLFD(font.XLFD), -1)
+				line = strings.ReplaceAll(line, m[0], strings.ReplaceAll(val[1], " ", "_"))
 			} else {
-				line = strings.Replace(line, m[0], font.XLFD, -1)
+				line = strings.ReplaceAll(line, m[0], strings.ReplaceAll(val[1], " ", "_"))
 			}
 		}
 		if strings.Contains(line, "_FILE_") {
-			m := fileRe.FindStringSubmatch(line)
-			font, ok := fonts.FindByName(strings.ToLower(m[1]))
+			m := FILE_REGEX.FindStringSubmatch(line)
+			val, ok := fonts[m[1]]
 			if !ok {
-				Dbg(verbosity, Debug, fmt.Sprintf("cannot find value for %s to replace.\n", m[0]))
+				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("cannot find value for %s to replace.\n", m[0]))
 				continue
 			}
-			line = strings.Replace(line, m[0], font.Path, -1)
+			line = strings.ReplaceAll(line, m[0], val[0])
 		}
 		if strings.Contains(line, "_X11FONTDIR_") {
-			line = strings.Replace(line, "_X11FONTDIR_", "/usr/share/fonts/truetype", -1)
+			line = strings.ReplaceAll(line, "_X11FONTDIR_", "/usr/share/fonts/truetype")
 		}
 		if len(line) != 0 {
-			javaText += line + "\n"
+			text += line + "\n"
 		}
 	}
 
-	javaFiles, err := filepath.Glob("/usr/lib*/jvm/jre/lib/fontconfig.SUSE.properties")
+	//FIXME file not found
+	javaFiles, err := filepath.Glob("/usr/lib*/jvm/*/jre/lib/fontconfig.SUSE.properties")
 	if err != nil {
 		return err
 	}
 
 	for _, f := range javaFiles {
-		err := overwriteOrRemoveFile(f, []byte(javaText))
+		err := overwriteOrRemoveFile(f, []byte(text))
 		if err != nil {
 			return err
 		}
