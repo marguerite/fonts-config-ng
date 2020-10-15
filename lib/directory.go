@@ -68,7 +68,7 @@ func (f FontScale) Less(i, j int) bool {
 // getX11FontDirs get all directories containing fonts except those in the blacklist
 func getX11FontDirs(cfg sysconfig.SysConfig) []string {
 	blacklist := []string{"/usr/share/fonts", "/usr/share/fonts/encodings", "/usr/share/fonts/encodings/large"}
-	systemFontDirs, _ := dirutils.Ls("/usr/share/fonts", "dir")
+	systemFontDirs, _ := dirutils.Ls("/usr/share/fonts", true, true, "dir")
 	fontDirs := []string{}
 	for _, d := range systemFontDirs {
 		if ok, e := slice.Contains(blacklist, d); !ok && e == nil {
@@ -106,7 +106,7 @@ func mtimeDifferOrMissing(src, dst string) bool {
 
 func createSymlink(d string) error {
 	forbiddenChars := []string{" ", ":"}
-	files, _ := dirutils.Ls(d)
+	files, _ := dirutils.Ls(d, true, true)
 	for _, f := range files {
 		for _, v := range forbiddenChars {
 			if strings.Contains(f, v) {

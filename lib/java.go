@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	dirutils "github.com/marguerite/util/dir"
 	ft "github.com/openSUSE/fonts-config/font"
 	"github.com/openSUSE/fonts-config/sysconfig"
 )
@@ -150,14 +151,13 @@ func GenerateJavaFontSetup(c ft.Collection, cfg sysconfig.SysConfig) error {
 		}
 	}
 
-	//FIXME file not found
-	javaFiles, err := filepath.Glob("/usr/lib*/jvm/*/jre/lib/fontconfig.SUSE.properties")
+	paths, err := dirutils.Glob("/usr/lib*/jvm/*/jre/lib")
 	if err != nil {
 		return err
 	}
 
-	for _, f := range javaFiles {
-		err := overwriteOrRemoveFile(f, []byte(text))
+	for _, path := range paths {
+		err := overwriteOrRemoveFile(filepath.Join(path, "fontconfig.SUSE.properties"), []byte(text))
 		if err != nil {
 			return err
 		}

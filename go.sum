@@ -3,8 +3,8 @@ github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d h1:U+s90UTSY
 github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d/go.mod h1:maD7wRr/U5Z6m/iR4s+kqSMx2CaBsrgA7czyZG/E6dU=
 github.com/cpuguy83/go-md2man/v2 v2.0.0 h1:EoUDS0afbrsXAZ9YQ9jdu/mZ2sXgT1/2yyNng4PGlyM=
 github.com/cpuguy83/go-md2man/v2 v2.0.0/go.mod h1:maD7wRr/U5Z6m/iR4s+kqSMx2CaBsrgA7czyZG/E6dU=
-github.com/marguerite/util v0.0.0-20200227041307-e5df39a6ecd5 h1:pe5nncWQnatX4yCmr2num7l7GfvYCWJjuBieGccdfYg=
-github.com/marguerite/util v0.0.0-20200227041307-e5df39a6ecd5/go.mod h1:O9sK+ae5egCLsW7GODcULahgSNJ5P3XNSPgccfyr87E=
+github.com/marguerite/util v0.0.0-20201015054134-9d2feb7630c1 h1:6UMLA6yHBqn5vtRIOJjNhaqgruJOx2qEmx7La6p1pnw=
+github.com/marguerite/util v0.0.0-20201015054134-9d2feb7630c1/go.mod h1:O9sK+ae5egCLsW7GODcULahgSNJ5P3XNSPgccfyr87E=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/russross/blackfriday/v2 v2.0.1 h1:lPqVAte+HuHNfhJ/0LC98ESWRz8afy9tM/0RK8m9o+Q=
