@@ -6,6 +6,8 @@ import (
 	"io"
 	"log"
 	"strings"
+
+	"github.com/marguerite/go-stdlib/ioutils"
 )
 
 func mkMetricCompatibility(f io.Reader) string {
@@ -34,7 +36,7 @@ func GenMetricCompatibility(verbosity int) {
 	avail := "/usr/share/fontconfig/conf.avail/30-metric-aliases.conf"
 	file := "/etc/fonts/conf.d/30-metric-aliases.conf"
 
-	text := mkMetricCompatibility(NewReader(avail))
+	text := mkMetricCompatibility(ioutils.NewReaderFromFile(avail))
 
 	Dbg(verbosity, Debug, fmt.Sprintf("Writing %s\n", file))
 

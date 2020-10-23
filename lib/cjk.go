@@ -3,8 +3,8 @@ package lib
 import (
 	"strings"
 
-	"github.com/marguerite/util/slice"
-	ft "github.com/openSUSE/fonts-config/font"
+	ft "github.com/marguerite/fonts-config-ng/font"
+	"github.com/marguerite/go-stdlib/slice"
 )
 
 //GenCJKConfig generate cjk specific fontconfig configuration like

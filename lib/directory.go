@@ -11,10 +11,11 @@ import (
 	"strings"
 	"time"
 
-	dirutils "github.com/marguerite/util/dir"
-	"github.com/marguerite/util/fileutils"
-	"github.com/marguerite/util/slice"
-	"github.com/openSUSE/fonts-config/sysconfig"
+	"github.com/marguerite/fonts-config-ng/sysconfig"
+	dirutils "github.com/marguerite/go-stdlib/dir"
+	"github.com/marguerite/go-stdlib/fileutils"
+	"github.com/marguerite/go-stdlib/slice"
+	"github.com/marguerite/go-stdlib/stringutils"
 )
 
 // FontScaleEntry presents an entry in fonts.scale.
@@ -184,7 +185,7 @@ func generateTTCap(fontScale *FontScale, cfg sysconfig.SysConfig) {
 	for _, f := range *fontScale {
 		// don't touch existing TTCap options.
 		if re.MatchString(f.XLFD) {
-			if fileutils.HasPrefixOrSuffix(f.Font, suffix) == 0 {
+			if ok, _, _ := stringutils.Contains(f.Font, suffix...); !ok {
 				// the freetype module handles TrueType, OpenType, and Type1 fonts.
 				continue
 			}
@@ -230,7 +231,7 @@ func generateTTCap(fontScale *FontScale, cfg sysconfig.SysConfig) {
 	// add bw=0.5 option when necessary:
 	for _, f := range *fontScale {
 
-		if fileutils.HasPrefixOrSuffix(f.Font, suffix) == 0 {
+		if ok, _, _ := stringutils.Contains(f.Font, suffix...); !ok {
 			// the freetype module handles TrueType, OpenType, and Type1 fonts.
 			continue
 		}
@@ -390,7 +391,7 @@ func fixFontScales(d string, cfg sysconfig.SysConfig) error {
 
 	for _, f := range handmadeScales {
 		suffix := []string{".swp", ".bak", ".sav", ".save", ".rpmsave", ".rpmorig", ".rpmnew"}
-		if fileutils.HasPrefixOrSuffix(f, suffix) != 0 {
+		if ok, _, _ := stringutils.Contains(f, suffix...); ok {
 			Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("%s is considered a backup file, ignored.\n", f))
 			continue
 		}

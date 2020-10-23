@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/openSUSE/fonts-config/sysconfig"
+	"github.com/marguerite/fonts-config-ng/sysconfig"
 )
 
 func fixFamilyName(name string) string {

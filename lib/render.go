@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/openSUSE/fonts-config/sysconfig"
+	"github.com/marguerite/fonts-config-ng/sysconfig"
 )
 
 func genBitmapLanguagesConfig(cfg sysconfig.SysConfig) string {

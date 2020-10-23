@@ -4,7 +4,7 @@ import (
 	"log"
 	"strconv"
 
-	ft "github.com/openSUSE/fonts-config/font"
+	ft "github.com/marguerite/fonts-config-ng/font"
 )
 
 // genFcPreamble generate fontconfig preamble

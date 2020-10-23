@@ -7,22 +7,23 @@ import (
 	"regexp"
 	"strings"
 
-	dirutils "github.com/marguerite/util/dir"
-	ft "github.com/openSUSE/fonts-config/font"
-	"github.com/openSUSE/fonts-config/sysconfig"
+	ft "github.com/marguerite/fonts-config-ng/font"
+	"github.com/marguerite/fonts-config-ng/sysconfig"
+	dirutils "github.com/marguerite/go-stdlib/dir"
+	"github.com/marguerite/go-stdlib/ioutils"
 )
 
 var (
 	DEFAULT_JAVA_FONTS = map[string][]string{
-		"SANS_JAPANESE":             []string{"/usr/share/fonts/truetype/sazanami-gothic.ttf", "-misc-sazanami gothic-"},
-		"SERIF_JAPANESE":            []string{"/usr/share/fonts/truetype/sazanami-mincho.ttf", "-misc-sazanami mincho-"},
-		"MONO_JAPANESE":             []string{"/usr/share/fonts/truetype/sazanami-gothic.ttf", "-misc-sazanami gothic-"},
-		"SANS_SIMPLIFIED_CHINESE":   []string{"/usr/share/fonts/truetype/gbsn001p.ttf", "-arphic-ar pl sungtil gb-"},
-		"SERIF_SIMPLIFIED_CHINESE":  []string{"/usr/share/fonts/truetype/gbsn001p.ttf", "-arphic-ar pl sungtil gb-"},
-		"SANS_TRADITIONAL_CHINESE":  []string{"/usr/share/fonts/truetype/bsmi001p.ttf", "-arphic-ar pl mingti2l big5-"},
-		"SERIF_TRADITIONAL_CHINESE": []string{"/usr/share/fonts/truetype/bsmi001p.ttf", "-arphic-ar pl mingti2l big5-"},
-		"SANS_KOREAN":               []string{"/usr/share/fonts/truetype/dotum.ttf", "-baekmukttf-dotum-"},
-		"SERIF_KOREAN":              []string{"/usr/share/fonts/truetype/batang.ttf", "-baekmukttf-batang-"},
+		"SANS_JAPANESE":             {"/usr/share/fonts/truetype/sazanami-gothic.ttf", "-misc-sazanami gothic-"},
+		"SERIF_JAPANESE":            {"/usr/share/fonts/truetype/sazanami-mincho.ttf", "-misc-sazanami mincho-"},
+		"MONO_JAPANESE":             {"/usr/share/fonts/truetype/sazanami-gothic.ttf", "-misc-sazanami gothic-"},
+		"SANS_SIMPLIFIED_CHINESE":   {"/usr/share/fonts/truetype/gbsn001p.ttf", "-arphic-ar pl sungtil gb-"},
+		"SERIF_SIMPLIFIED_CHINESE":  {"/usr/share/fonts/truetype/gbsn001p.ttf", "-arphic-ar pl sungtil gb-"},
+		"SANS_TRADITIONAL_CHINESE":  {"/usr/share/fonts/truetype/bsmi001p.ttf", "-arphic-ar pl mingti2l big5-"},
+		"SERIF_TRADITIONAL_CHINESE": {"/usr/share/fonts/truetype/bsmi001p.ttf", "-arphic-ar pl mingti2l big5-"},
+		"SANS_KOREAN":               {"/usr/share/fonts/truetype/dotum.ttf", "-baekmukttf-dotum-"},
+		"SERIF_KOREAN":              {"/usr/share/fonts/truetype/batang.ttf", "-baekmukttf-batang-"},
 	}
 
 	DEFAULT_JAVA_XLFDS = map[string]string{"MS Gothic": "-ricoh-ms gothic-",
@@ -52,18 +53,18 @@ var (
 		"Noto Sans KR":         "-goog-noto sans kr-"}
 
 	DEFAULT_JAVA_FPL = map[string][]string{
-		"SANS_JAPANESE":             []string{"MS Gothic", "HGGothicB", "IPAPGothic", "IPAexGothic", "Sazanami Gothic"},
-		"SERIF_JAPANESE":            []string{"MS Mincho", "HGMinchoL", "IPAPMincho", "IPAexMincho", "Sazanami Mincho"},
-		"MONO_JAPANESE":             []string{"MS Gothic", "HGGothicB", "IPAGothic", "Sazanamii Gothic"},
-		"SANS_SIMPLIFIED_CHINESE":   []string{"Noto Sans SC:style=Regular:weight=80", "FZsongTi", "AR PL ShanHeiSun Uni", "AR PL SungtiL GB"},
-		"SERIF_SIMPLIFIED_CHINESE":  []string{"Noto Serif SC:style=Regular:weight=80", "FZsongTi", "AR PL ShanHeiSun Uni", "AR PL SungtiL GB"},
-		"SANS_TRADITIONAL_CHINESE":  []string{"Noto Sans TC:style=Regular:weight=80", "AR PL ShanHeiSun Uni", "FZMingTiB", "AR PL Mingti2L Big5"},
-		"SERIF_TRADITIONAL_CHINESE": []string{"Noto Serif TC:style=Regular:weight=80", "AR PL ShanHeiSun Uni", "FZMingTiB", "AR PL Mingti2L Big5"},
-		"SANS_KOREAN":               []string{"Noto Sans KR:style=Regular:weight=80", "UnDotum", "Baekmuk Gulim", "Baekmuk Dotum"},
-		"SERIF_KOREAN":              []string{"Noto Serif KR:style=Regular:weight=80", "UnBatang", "Baekmuk Batang"},
-		"SANS_LATIN1":               []string{"DejaVu Sans:style=Book:width=100", "Liberation Sans:style=Regular", "Droid Sans:style=Regular"},
-		"SERIF_LATIN1":              []string{"DejaVu Serif:style=Book:width=100", "Liberation Serif:style=Regular", "Droid Serif:style=Regular"},
-		"MONO_LATIN1":               []string{"DejaVu Sans Mono:style=Book", "Liberation Mono:style=Regular", "Droid Sans Mono:style=Regular"},
+		"SANS_JAPANESE":             {"MS Gothic", "HGGothicB", "IPAPGothic", "IPAexGothic", "Sazanami Gothic"},
+		"SERIF_JAPANESE":            {"MS Mincho", "HGMinchoL", "IPAPMincho", "IPAexMincho", "Sazanami Mincho"},
+		"MONO_JAPANESE":             {"MS Gothic", "HGGothicB", "IPAGothic", "Sazanamii Gothic"},
+		"SANS_SIMPLIFIED_CHINESE":   {"Noto Sans SC:style=Regular:weight=80", "FZsongTi", "AR PL ShanHeiSun Uni", "AR PL SungtiL GB"},
+		"SERIF_SIMPLIFIED_CHINESE":  {"Noto Serif SC:style=Regular:weight=80", "FZsongTi", "AR PL ShanHeiSun Uni", "AR PL SungtiL GB"},
+		"SANS_TRADITIONAL_CHINESE":  {"Noto Sans TC:style=Regular:weight=80", "AR PL ShanHeiSun Uni", "FZMingTiB", "AR PL Mingti2L Big5"},
+		"SERIF_TRADITIONAL_CHINESE": {"Noto Serif TC:style=Regular:weight=80", "AR PL ShanHeiSun Uni", "FZMingTiB", "AR PL Mingti2L Big5"},
+		"SANS_KOREAN":               {"Noto Sans KR:style=Regular:weight=80", "UnDotum", "Baekmuk Gulim", "Baekmuk Dotum"},
+		"SERIF_KOREAN":              {"Noto Serif KR:style=Regular:weight=80", "UnBatang", "Baekmuk Batang"},
+		"SANS_LATIN1":               {"DejaVu Sans:style=Book:width=100", "Liberation Sans:style=Regular", "Droid Sans:style=Regular"},
+		"SERIF_LATIN1":              {"DejaVu Serif:style=Book:width=100", "Liberation Serif:style=Regular", "Droid Serif:style=Regular"},
+		"MONO_LATIN1":               {"DejaVu Sans Mono:style=Book", "Liberation Mono:style=Regular", "Droid Sans Mono:style=Regular"},
 	}
 
 	XLFD_REGEX = regexp.MustCompile(`_(\w+_\w+(_\w+_)?)_XLFD_(\w+_\w+_)?`)
@@ -81,7 +82,7 @@ func getJavaXLFD(name string) string {
 func GenerateJavaFontSetup(c ft.Collection, cfg sysconfig.SysConfig) error {
 	Dbg(cfg.Int("VERBOSITY"), Verbose, "Generating java font setup ...\n")
 
-	tmpl := NewReader("/usr/share/fonts-config/fontconfig.SUSE.properties.template")
+	tmpl := ioutils.NewReaderFromFile("/usr/share/fonts-config/fontconfig.SUSE.properties.template")
 
 	fonts := make(map[string][]string)
 	re := regexp.MustCompile(`([^:]+)(:.*)?$`)

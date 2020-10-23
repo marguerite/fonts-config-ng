@@ -9,11 +9,12 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/marguerite/util/dir"
-	"github.com/marguerite/util/slice"
-	"github.com/openSUSE/fonts-config/font"
-	"github.com/openSUSE/fonts-config/lib"
-	"github.com/openSUSE/fonts-config/sysconfig"
+	"github.com/marguerite/fonts-config-ng/font"
+	"github.com/marguerite/fonts-config-ng/lib"
+	"github.com/marguerite/fonts-config-ng/sysconfig"
+	"github.com/marguerite/go-stdlib/dir"
+	"github.com/marguerite/go-stdlib/ioutils"
+	"github.com/marguerite/go-stdlib/slice"
 	"github.com/urfave/cli"
 )
 
@@ -180,7 +181,7 @@ func main() {
 		}
 
 		cfg := make(sysconfig.SysConfig)
-		f := lib.NewReader("/etc/sysconfig/fonts-config")
+		f := ioutils.NewReaderFromFile("/etc/sysconfig/fonts-config")
 		cfg.Unmarshal(f)
 		cfg["VERBOSITY"] = verbosity
 

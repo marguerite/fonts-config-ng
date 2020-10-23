@@ -5,9 +5,9 @@ import (
 	"log"
 	"sync"
 
-	fccharset "github.com/openSUSE/fonts-config/fc-charset"
-	ft "github.com/openSUSE/fonts-config/font"
-	"github.com/openSUSE/fonts-config/sysconfig"
+	fccharset "github.com/marguerite/fonts-config-ng/fc-charset"
+	ft "github.com/marguerite/fonts-config-ng/font"
+	"github.com/marguerite/fonts-config-ng/sysconfig"
 )
 
 // getEmojiFonts get all system emoji fonts

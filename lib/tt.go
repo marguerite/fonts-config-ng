@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	ft "github.com/openSUSE/fonts-config/font"
+	ft "github.com/marguerite/fonts-config-ng/font"
 )
 
 //GenTTType group fonts based on their hinting instructions' existences

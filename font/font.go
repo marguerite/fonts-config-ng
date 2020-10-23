@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/marguerite/util/fileutils"
-	"github.com/marguerite/util/slice"
-	fccharset "github.com/openSUSE/fonts-config/fc-charset"
+	fccharset "github.com/marguerite/fonts-config-ng/fc-charset"
+	"github.com/marguerite/go-stdlib/slice"
+	"github.com/marguerite/go-stdlib/stringutils"
 )
 
 //Collection A collection of type Font
@@ -38,7 +38,7 @@ func NewCollection() Collection {
 				continue
 			}
 			// reject directory and font format usually not used for display
-			if fileutils.HasPrefixOrSuffix(i, ".dir", ".pcf.gz", ".pfa", ".pfb", ".afm", ".otb") == 0 {
+			if ok, _, _ := stringutils.Contains(i, ".dir", ".pcf.gz", ".pfa", ".pfb", ".afm", ".otb"); !ok {
 				// Multi thread here
 				NewFont(&font, i, paths)
 			}
@@ -174,7 +174,7 @@ func getFontPaths() map[string]string {
 		if b == ':' {
 			if first {
 				font := string(tmp)
-				if fileutils.HasPrefixOrSuffix(font, ".pcf.gz", ".pfa", ".pfb", ".afm", ".otb") == 0 {
+				if ok, _, _ := stringutils.Contains(font, ".pcf.gz", ".pfa", ".pfb", ".afm", ".otb"); !ok {
 					fonts[filepath.Base(font)] = font
 				}
 			}

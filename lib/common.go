@@ -1,27 +1,23 @@
 package lib
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 )
 
-// Debug echo debug level information to output
-const Debug int = 256
-
-// Verbose echo verbose level information to output
-const Verbose int = 1
-
-// Quiet echo nothing to output
-const Quiet int = 0
-
-// FcSuffix suffix for every fontconfig configuration file
-const FcSuffix string = "</fontconfig>\n"
+const (
+	// Debug echo debug level information to output
+	Debug int = 256
+	// Verbose echo verbose level information to output
+	Verbose int = 1
+	// Quiet echo nothing to output
+	Quiet int = 0
+	// FcSuffix suffix for every fontconfig configuration file
+	FcSuffix string = "</fontconfig>\n"
+)
 
 // Dbg if dbgLevel >= limit, return the dbgOut. dbgOut can be plain string or func to format debug information by yourself
 func Dbg(verbosity int, level int, dbgOut interface{}, parms ...interface{}) {
@@ -47,14 +43,14 @@ func Dbg(verbosity int, level int, dbgOut interface{}, parms ...interface{}) {
 // GetFcConfig return fontconfig file locations
 func GetFcConfig(c string, userMode bool) string {
 	m := map[string][]string{
-		"render":      []string{"10-rendering-options.conf", "rendering-options.conf"},
-		"fpl":         []string{"58-family-prefer-local.conf", "family-prefer.conf"},
-		"blacklist":   []string{"81-emoji-blacklist-glyphs.conf", "emoji-blacklist-glyphs.conf"},
-		"tt":          []string{"10-group-tt-hinted-fonts.conf", "tt-hinted-fonts.conf"},
-		"nonTT":       []string{"10-group-tt-non-hinted-fonts.conf", "tt-non-hinted-fonts.conf"},
-		"notoDefault": []string{"49-family-default-noto.conf", "family-default-noto.conf"},
-		"notoPrefer":  []string{"59-family-prefer-lang-specific-noto.conf", "family-prefer-lang-specific-noto.conf"},
-		"cjk":         []string{"59-family-prefer-lang-specific-cjk.conf", "family-prefer-lang-specific-cjk.conf"},
+		"render":      {"10-rendering-options.conf", "rendering-options.conf"},
+		"fpl":         {"58-family-prefer-local.conf", "family-prefer.conf"},
+		"blacklist":   {"81-emoji-blacklist-glyphs.conf", "emoji-blacklist-glyphs.conf"},
+		"tt":          {"10-group-tt-hinted-fonts.conf", "tt-hinted-fonts.conf"},
+		"nonTT":       {"10-group-tt-non-hinted-fonts.conf", "tt-non-hinted-fonts.conf"},
+		"notoDefault": {"49-family-default-noto.conf", "family-default-noto.conf"},
+		"notoPrefer":  {"59-family-prefer-lang-specific-noto.conf", "family-prefer-lang-specific-noto.conf"},
+		"cjk":         {"59-family-prefer-lang-specific-cjk.conf", "family-prefer-lang-specific-cjk.conf"},
 	}
 
 	if userMode {
@@ -66,22 +62,6 @@ func GetFcConfig(c string, userMode bool) string {
 		prefix = "/etc/fonts/conf.d"
 	}
 	return filepath.Join(prefix, m[c][0])
-}
-
-// NewReader create an io.Reader from file
-func NewReader(f string) *bytes.Buffer {
-	dat, err := os.Open(f)
-	if err != nil {
-		log.Fatalf("can not open %s: \"%s\".\n", f, err.Error())
-	}
-	defer dat.Close()
-
-	buf, err := ioutil.ReadAll(dat)
-	if err != nil {
-		log.Fatalf("can not read %s: \"%s\".\n", f, err.Error())
-	}
-
-	return bytes.NewBuffer(buf)
 }
 
 //overwriteOrRemoveFile Overwrite file with new content or completely remove the file.
