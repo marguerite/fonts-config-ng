@@ -43,7 +43,7 @@ func (lfpl LFPLs) GenLFPLsConfig() string {
 				"<!--- 1. Prepend 'Noto Sans/Serif' before CJK because the Latin part is from\n" +
 				"\t'Adobe Source Sans/Serif Pro'.-->\n" +
 				"<!--- 2. Don't prepend for Mono because its Latin part 'Adobe Source Code Pro'\n" +
-				"\tis openSUSE's choice for monospace font.\n" +
+				"\tis openSUSE's choice for monospace font.-->\n" +
 				"<!--- 3. 'Noto Sans Mono CJK XX' is real font in openSUSE.-->\n\n"
 		}
 		config += notoGenConfigForSpecificGenericFontAndLang(v)

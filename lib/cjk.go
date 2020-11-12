@@ -163,7 +163,7 @@ func genSourceHanAliasConfig(generic, suffix string, otc bool, availFonts ft.Col
 	str := "\t<alias>\n\t\t<family>" + fontName + "</family>\n"
 
 	if !otc || hw {
-		str += "\t\t<accept>\n\t\t\t<family>" + notoName + "</familly>\n\t\t</accept>\n"
+		str += "\t\t<accept>\n\t\t\t<family>" + notoName + "</family>\n\t\t</accept>\n"
 	} else {
 		remain := sufs
 		slice.Remove(&remain, notoSuffix)
