@@ -20,7 +20,7 @@ type Collection []Font
 
 // NewCollection Initialize a new collection of Font from system installed fonts queried by fc-cat.
 func NewCollection() Collection {
-	paths := getFontPaths()
+	paths := GetFontPaths()
 	out, err := exec.Command("/usr/bin/fc-cat").Output()
 	if err != nil {
 		panic(err)
@@ -38,7 +38,7 @@ func NewCollection() Collection {
 				continue
 			}
 			// reject directory and font format usually not used for display
-			if ok, _, _ := stringutils.Contains(i, ".dir", ".pcf.gz", ".pfa", ".pfb", ".afm", ".otb"); !ok {
+			if ok, _, _ := stringutils.Contains(i, ".dir", ".pcf.gz", ".pfa", ".pfb", ".afm", ".gsf", ".otb"); !ok {
 				// Multi thread here
 				NewFont(&font, i, paths)
 			}
@@ -159,8 +159,8 @@ func getMatchedFontName(names []string, restricts ...interface{}) ([]string, err
 	return []string{}, fmt.Errorf("no matched name found")
 }
 
-// getFontPaths get all system installed font's paths via fc-list
-func getFontPaths() map[string]string {
+// GetFontPaths get all system installed font's paths via fc-list
+func GetFontPaths() map[string]string {
 	out, err := exec.Command("/usr/bin/fc-list").Output()
 	if err != nil {
 		log.Fatal("no fc-list found")
@@ -174,9 +174,7 @@ func getFontPaths() map[string]string {
 		if b == ':' {
 			if first {
 				font := string(tmp)
-				if ok, _, _ := stringutils.Contains(font, ".pcf.gz", ".pfa", ".pfb", ".afm", ".otb"); !ok {
-					fonts[filepath.Base(font)] = font
-				}
+				fonts[filepath.Base(font)] = font
 			}
 			tmp = []byte{}
 			first = false

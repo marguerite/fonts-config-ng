@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/marguerite/fonts-config-ng/font"
 	"github.com/marguerite/fonts-config-ng/sysconfig"
 	dirutils "github.com/marguerite/go-stdlib/dir"
 	"github.com/marguerite/go-stdlib/fileutils"
@@ -69,12 +70,22 @@ func (f FontScale) Less(i, j int) bool {
 // getX11FontDirs get all directories containing fonts except those in the blacklist
 func getX11FontDirs(cfg sysconfig.SysConfig) []string {
 	blacklist := []string{"/usr/share/fonts", "/usr/share/fonts/encodings", "/usr/share/fonts/encodings/large"}
-	systemFontDirs, _ := dirutils.Ls("/usr/share/fonts", true, true, "dir")
-	fontDirs := []string{}
-	for _, d := range systemFontDirs {
-		if ok, e := slice.Contains(blacklist, d); !ok && e == nil {
-			fontDirs = append(fontDirs, d)
+	fontPaths := font.GetFontPaths()
+	var fontDirs []string
+	for _, v := range fontPaths {
+		base := filepath.Dir(v)
+		if ok, e := slice.Contains(blacklist, base); ok && e == nil {
+			continue
 		}
+		if ok, e := slice.Contains(fontDirs, base); ok && e == nil {
+			continue
+		}
+		fontDirs = append(fontDirs, base)
+	}
+
+	// usually /usr/share/fonts/cyrillic is not aquired by fc-list
+	if ok, e := slice.Contains(fontDirs, "/usr/share/fonts/cyrillic"); !ok || e != nil {
+		fontDirs = append(fontDirs, "/usr/share/fonts/cyrillic")
 	}
 
 	Dbg(cfg.Int("VERBOSITY"), Debug, func() string {

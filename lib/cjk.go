@@ -63,7 +63,7 @@ func fixDualAsianFonts(availFonts ft.Collection, userMode bool) string {
 
 func tweakNotoSansSerif(availFonts ft.Collection) string {
 	nameLangs := []string{"zh-CN", "zh-SG", "zh-TW", "zh-HK", "zh-MO", "ja", "ko"}
-	matrix := []float64{0.67, 0, 0, 0.67}
+	matrix := []float64{0.90, 0, 0, 1}
 	weights := [][]int{{0, 40, 0}, {50, 99, 50}, {99, 179, 80}, {180, 0, 180}}
 	widths := []int{63, 100}
 	comment := "<!--- Adjust Noto Sans/Serif for CJK\n" +
