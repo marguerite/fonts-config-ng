@@ -218,7 +218,6 @@ func main() {
 			# will think that the cache files are out of date again. */
 
 		collection := font.NewCollection()
-		lib.GenTTType(collection, c.Bool("u"))
 		lib.GenRenderingOptions(c.Bool("u"), cfg)
 		lib.GenFamilyPreferenceLists(c.Bool("u"), cfg)
 		lib.GenEmojiBlacklist(collection, c.Bool("u"), cfg)

@@ -20,19 +20,6 @@ func genFcPreamble(userMode bool, comment string) string {
 	return config
 }
 
-//genFontTypeByHinting generate fontconfig font_type block based on tt hinting.
-func genFontTypeByHinting(name string, hinting bool) string {
-	config := "\t<match target=\"font\">\n\t\t<test name=\"family\">\n\t\t\t<string>" + name + "</string>\n\t\t</test>\n"
-	config += "\t\t<edit name=\"font_type\" mode=\"assign\">\n\t\t\t<string>"
-	if hinting {
-		config += "TT Instructed Font"
-	} else {
-		config += "NON TT Instructed Font"
-	}
-	config += "</string>\n\t\t</edit>\n\t</match>\n\n"
-	return config
-}
-
 func genBlacklistConfig(b Blacklist) string {
 	config := "\t<match target=\"scan\">\n\t\t<test name=\"family\">\n\t\t\t<string>" + b.Name + "</string>\n\t\t</test>\n"
 	config += "\t\t<edit name=\"charset\" mode=\"assign\">\n\t\t\t<minus>\n\t\t\t\t<name>charset</name>\n"
