@@ -1,8 +1,6 @@
 package lib
 
 import (
-	"strings"
-
 	ft "github.com/marguerite/fonts-config-ng/font"
 	"github.com/marguerite/go-stdlib/slice"
 )
@@ -13,7 +11,6 @@ func GenCJKConfig(availFonts ft.Collection, userMode bool) {
 	conf := GetFcConfig("cjk", userMode)
 	text := genFcPreamble(userMode, "")
 	text += fixDualAsianFonts(availFonts, userMode)
-	text += aliasSourceHan(availFonts)
 	text += aliasNotoCJKOTC(availFonts)
 	text += FcSuffix
 	overwriteOrRemoveFile(conf, []byte(text))
@@ -84,72 +81,4 @@ func aliasNotoCJKOTC(availFonts ft.Collection) string {
 		return comment + text
 	}
 	return text
-}
-
-func aliasSourceHan(availFonts ft.Collection) string {
-	comment := "<!--- Alias 'Adobe Source Han Sans/Serif/Sans HW' since its CJK part is the same as Noto Sans/Serif.\n" +
-		"\t1. We don't need to prepend Source Sans/Serif Pro, since the Latin part has already been.\n" +
-		"\t2. If installed manually they can still be used.-->\n\n"
-	text := ""
-
-	genericSuffix := []string{"Sans", "Serif", "Sans HW"}
-	regionSuffix := []string{" CN", " TW", " JP", " KR"}
-	otcSuffix := []string{"", " J", " K", " SC", " TC"}
-
-	for _, g := range genericSuffix {
-		for _, r := range regionSuffix {
-			text += genSourceHanAliasConfig(g, r, false, availFonts)
-		}
-		for _, o := range otcSuffix {
-			text += genSourceHanAliasConfig(g, o, true, availFonts)
-		}
-	}
-	if len(text) > 0 {
-		return comment + text
-	}
-	return text
-}
-
-func genSourceHanAliasConfig(generic, suffix string, otc bool, availFonts ft.Collection) string {
-	fontName := "Source Han " + generic + suffix
-	hw := strings.Contains(fontName, " HW")
-	sufMap := map[string]string{" CN": " SC", " TW": " TC", " J": " JP", " K": " KR"}
-	sufs := []string{" JP", " KR", " SC", " TC"}
-	notoGeneric := generic
-	if notoGeneric == "Sans HW" {
-		notoGeneric = "Sans Mono CJK"
-	}
-
-	if len(suffix) == 0 {
-		suffix = " J"
-	}
-
-	notoSuffix := suffix
-	if val, ok := sufMap[suffix]; ok {
-		notoSuffix = val
-	}
-
-	notoName := "Noto " + notoGeneric + notoSuffix
-
-	if len(availFonts.FindByName(notoName)) <= 0 {
-		return ""
-	}
-
-	str := "\t<alias>\n\t\t<family>" + fontName + "</family>\n"
-
-	if !otc || hw {
-		str += "\t\t<accept>\n\t\t\t<family>" + notoName + "</family>\n\t\t</accept>\n"
-	} else {
-		remain := sufs
-		slice.Remove(&remain, notoSuffix)
-		str += "\t\t<prefer>\n\t\t\t<family>" + notoName + "</family>\n"
-		for _, i := range remain {
-			str += "\t\t\t<family>Noto " + notoGeneric + i + "</family>\n"
-		}
-		str += "\t\t</prefer>\n"
-	}
-
-	str += "\t</alias>\n\n"
-
-	return str
 }
