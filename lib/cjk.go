@@ -13,7 +13,6 @@ func GenCJKConfig(availFonts ft.Collection, userMode bool) {
 	conf := GetFcConfig("cjk", userMode)
 	text := genFcPreamble(userMode, "")
 	text += fixDualAsianFonts(availFonts, userMode)
-	text += tweakNotoSansSerif(availFonts)
 	text += aliasSourceHan(availFonts)
 	text += aliasNotoCJKOTC(availFonts)
 	text += FcSuffix
@@ -53,30 +52,6 @@ func fixDualAsianFonts(availFonts ft.Collection, userMode bool) string {
 		if isSpacingDual(font) >= 0 && isCJKFont(font) {
 			text += genDualAisanConfig(font)
 		}
-	}
-
-	if len(text) > 0 {
-		return comment + text
-	}
-	return text
-}
-
-func tweakNotoSansSerif(availFonts ft.Collection) string {
-	nameLangs := []string{"zh-CN", "zh-SG", "zh-TW", "zh-HK", "zh-MO", "ja", "ko"}
-	matrix := []float64{0.90, 0, 0, 1}
-	weights := [][]int{{0, 40, 0}, {50, 99, 50}, {99, 179, 80}, {180, 0, 180}}
-	widths := []int{63, 100}
-	comment := "<!--- Adjust Noto Sans/Serif for CJK\n" +
-		"\tThe Latin part of Noto Sans/Serif SC is Adobe Source Sans/Serif Pro,\n" +
-		"\tGoogle suggests to prepend Noto Sans/Serif to cover Latin glyphs for CJK,\n" +
-		"\tbut Adobe Source Sans/Serif Pro is 2/3 smaller than Noto Sans/Serif.\n" +
-		"\twe shrink Noto Sans/Serif with matrix, and adjust its weight/width correspondingly. -->\n\n"
-	text := ""
-
-	for _, i := range []string{"Noto Sans", "Noto Serif"} {
-		text += genCJKMatrixConfig(i, matrix, nameLangs, availFonts)
-		text += genCJKWeightConfig(i, weights, nameLangs, availFonts)
-		text += genCJKWidthConfig(i, widths, nameLangs, availFonts)
 	}
 
 	if len(text) > 0 {
