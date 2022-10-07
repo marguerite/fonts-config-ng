@@ -8,8 +8,6 @@ Next Generation of [fonts-config](https://github.com/openSUSE/fonts-config) in g
 
 The source for openSUSE's system fontconfig configurations.
 
-* 10-group-tt-hinted-fonts.conf
-* 10-group-tt-non-hinted-fonts.conf
 * 13-selective-rendering.conf
 * 61-wine-aliases.conf
 

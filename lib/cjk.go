@@ -101,7 +101,31 @@ func genNotoCJK() string {
 		"ja":    []string{"JP", "KR", "HK", "TW", "SC"},
 		"ko":    []string{"KR", "JP", "HK", "TW", "SC"}}
 
-	var str string
+	str := `<!--
+   Currently we use region-specific Subset OpenType/CFF (Subset OTF)
+   flavor of Google's Noto Sans/Serif CJK fonts, but previously we
+   used Super OpenType/CFF Collection (Super OTC), and other distributions
+   may use language-specific OpenType/CFF (OTF) flavor. So
+   Noto Sans/Serif CJK SC/TC/HK/JP/KR are also common font names.
+   Although pango/harfbuzz/freetype2 has support OpenType features,
+   Qt still doesn't support any OpenType feature in QFont,
+   and it may need application implementions to have those features
+   enabled by default. it may take decades.
+   so only the default glyph variant (JP) can be used in the
+   Super OTC and OTF flavors. We gave them very low priority
+   on openSUSE even if they were installed manually. Note, this
+   decision may hurt language-specific flavor because their names
+   are idential as the super OTC.
+   AND:
+   1. Google recommends us to put 'Noto Sans/Serif' before 'CJK'
+      because the Latin characters in the CJK fonts are from
+      Adobe's Source Sans Pro.
+   2. But we don't need to prepend 'Noto Mono' for 'Noto Sans Mono
+      CJK XX' because the later's Latin characters are from
+      Adobe's Source Code Pro which is openSUSE's choice for
+      Monospace font.
+   3. The 'Noto Sans Mono CJK XX' are real fonts in openSUSE.
+-->` + "\n"
 
 	for _, v := range []string{"sans-serif", "serif"} {
 		for k, v1 := range order {
