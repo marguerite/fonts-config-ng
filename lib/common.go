@@ -46,8 +46,6 @@ func GetFcConfig(c string, userMode bool) string {
 		"render":      {"10-rendering-options.conf", "rendering-options.conf"},
 		"fpl":         {"58-family-prefer-local.conf", "family-prefer.conf"},
 		"blacklist":   {"81-emoji-blacklist-glyphs.conf", "emoji-blacklist-glyphs.conf"},
-		"tt":          {"10-group-tt-hinted-fonts.conf", "tt-hinted-fonts.conf"},
-		"nonTT":       {"10-group-tt-non-hinted-fonts.conf", "tt-non-hinted-fonts.conf"},
 		"notoDefault": {"49-family-default-noto.conf", "family-default-noto.conf"},
 		"notoPrefer":  {"59-family-prefer-lang-specific-noto.conf", "family-prefer-lang-specific-noto.conf"},
 		"cjk":         {"59-family-prefer-lang-specific-cjk.conf", "family-prefer-lang-specific-cjk.conf"},
