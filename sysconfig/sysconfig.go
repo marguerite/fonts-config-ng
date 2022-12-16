@@ -8,12 +8,12 @@ import (
 	"strings"
 )
 
-// SysConfig dump /etc/sysconfig/*.sysconfig to golang structs
-type SysConfig map[string]interface{}
+// Config dump /etc/sysconfig/*.sysconfig to golang structs
+type Config map[string]interface{}
 
 // Bool find a bool value
-func (sys SysConfig) Bool(s string) bool {
-	if val, ok := sys[s]; ok {
+func (cfg Config) Bool(s string) bool {
+	if val, ok := cfg[s]; ok {
 		b, _ := val.(bool)
 		return b
 	}
@@ -21,8 +21,8 @@ func (sys SysConfig) Bool(s string) bool {
 }
 
 // Int find an integer value
-func (sys SysConfig) Int(s string) int {
-	if val, ok := sys[s]; ok {
+func (cfg Config) Int(s string) int {
+	if val, ok := cfg[s]; ok {
 		i, _ := val.(int)
 		return i
 	}
@@ -30,8 +30,8 @@ func (sys SysConfig) Int(s string) int {
 }
 
 // String find a string value
-func (sys SysConfig) String(s string) string {
-	if val, ok := sys[s]; ok {
+func (cfg Config) String(s string) string {
+	if val, ok := cfg[s]; ok {
 		s1, _ := val.(string)
 		return s1
 	}
@@ -39,7 +39,7 @@ func (sys SysConfig) String(s string) string {
 }
 
 // Marshal sysconfig to bytes again from template f.
-func (sys SysConfig) Marshal(f io.Reader, b []byte) {
+func (cfg Config) Marshal(f io.Reader, b []byte) {
 	s := bufio.NewScanner(f)
 	for s.Scan() {
 		if strings.HasPrefix(s.Text(), "#") || len(s.Text()) == 0 {
@@ -49,7 +49,7 @@ func (sys SysConfig) Marshal(f io.Reader, b []byte) {
 			continue
 		}
 		arr := strings.Split(strings.ReplaceAll(s.Text(), "\"", ""), "=")
-		if val, ok := sys[arr[0]]; ok {
+		if val, ok := cfg[arr[0]]; ok {
 			if reflect.TypeOf(val).Kind() == reflect.Int {
 				i, _ := val.(int)
 				val = i
@@ -71,7 +71,7 @@ func (sys SysConfig) Marshal(f io.Reader, b []byte) {
 }
 
 // Unmarshal unmarshal sysconfig
-func (sys SysConfig) Unmarshal(f io.Reader) {
+func (cfg Config) Unmarshal(f io.Reader) {
 	s := bufio.NewScanner(f)
 	for s.Scan() {
 		if strings.HasPrefix(s.Text(), "#") || len(s.Text()) == 0 {
@@ -89,16 +89,16 @@ func (sys SysConfig) Unmarshal(f io.Reader) {
 				}
 				b, err1 := strconv.ParseBool(arr[1])
 				if err1 != nil {
-					sys[arr[0]] = arr[1]
+					cfg[arr[0]] = arr[1]
 					continue
 				}
-				sys[arr[0]] = b
+				cfg[arr[0]] = b
 				continue
 			}
-			sys[arr[0]] = val
+			cfg[arr[0]] = val
 			continue
 		}
 		var face interface{}
-		sys[arr[0]] = face
+		cfg[arr[0]] = face
 	}
 }

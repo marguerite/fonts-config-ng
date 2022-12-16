@@ -79,7 +79,7 @@ func getJavaXLFD(name string) string {
 }
 
 // GenerateJavaFontSetup generates fontconfig properties conf for java
-func GenerateJavaFontSetup(c ft.Collection, cfg sysconfig.SysConfig) error {
+func GenerateJavaFontSetup(c ft.Collection, cfg sysconfig.Config) error {
 	Dbg(cfg.Int("VERBOSITY"), Verbose, "Generating java font setup ...\n")
 
 	tmpl := ioutils.NewReaderFromFile("/usr/share/fonts-config/fontconfig.SUSE.properties.template")

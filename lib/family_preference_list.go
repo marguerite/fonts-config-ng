@@ -19,7 +19,7 @@ func fixFamilyName(name string) string {
 	return name
 }
 
-func buildFPL(genericName, preferredFamiliesInString string, userMode bool, cfg sysconfig.SysConfig) string {
+func buildFPL(genericName, preferredFamiliesInString string, userMode bool, cfg sysconfig.Config) string {
 	families := strings.Split(preferredFamiliesInString, ":")
 	genericName = fixFamilyName(genericName)
 	fpl := ""
@@ -66,7 +66,7 @@ func buildFPL(genericName, preferredFamiliesInString string, userMode bool, cfg 
 }
 
 // GenFamilyPreferenceLists generates fontconfig fpl conf with user's explicit choices
-func GenFamilyPreferenceLists(userMode bool, cfg sysconfig.SysConfig) {
+func GenFamilyPreferenceLists(userMode bool, cfg sysconfig.Config) {
 	fplFile := GetFcConfig("fpl", userMode)
 	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("Generating %s", fplFile))
 

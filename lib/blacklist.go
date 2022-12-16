@@ -5,7 +5,7 @@ import (
 	"log"
 	"sync"
 
-	fccharset "github.com/marguerite/fonts-config-ng/fc-charset"
+	"github.com/marguerite/fonts-config-ng/charset"
 	ft "github.com/marguerite/fonts-config-ng/font"
 	"github.com/marguerite/fonts-config-ng/sysconfig"
 )
@@ -24,13 +24,13 @@ func getEmojiFonts(c ft.Collection) ft.Collection {
 // Blacklist the font name and blacklisted charset
 type Blacklist struct {
 	Name string
-	fccharset.Charset
+	charset.Charset
 }
 
 // GenEmojiBlacklist generate 81-emoji-blacklist-glyphs.conf
 // 1. blacklist charsets < 200d in emoji fonts, they are everywhere and non-emoji
 // 2. balcklist emoji unicode codepoints in other fonts
-func GenEmojiBlacklist(collection ft.Collection, userMode bool, cfg sysconfig.SysConfig) {
+func GenEmojiBlacklist(collection ft.Collection, userMode bool, cfg sysconfig.Config) {
 	emojis := getEmojiFonts(collection)
 
 	// no emoji fonts on the system
@@ -41,11 +41,10 @@ func GenEmojiBlacklist(collection ft.Collection, userMode bool, cfg sysconfig.Sy
 	Dbg(cfg.Int("VERBOSITY"), Debug, "blacklisting charsets < 200d in emoji fonts")
 
 	var emojiConf, nonEmojiConf string
-	var charset fccharset.Charset
+	var cs charset.Charset
 
 	for _, ft := range emojis {
-		c := fccharset.Charset{}
-		c1 := fccharset.Charset{}
+		var c, c1 charset.Charset
 
 		// select CharsetRange < 200d
 		for _, v := range ft.Charset {
@@ -56,7 +55,7 @@ func GenEmojiBlacklist(collection ft.Collection, userMode bool, cfg sysconfig.Sy
 			}
 		}
 
-		charset = charset.Union(c1)
+		cs = cs.Union(c1)
 
 		// black'em
 		if len(c) > 0 {
@@ -80,7 +79,7 @@ func GenEmojiBlacklist(collection ft.Collection, userMode bool, cfg sysconfig.Sy
 		if !font.IsEmoji() {
 			go func(f ft.Font, verbosity int) {
 				defer wg.Done()
-				in := f.Charset.Intersect(charset)
+				in := f.Charset.Intersect(cs)
 
 				if len(in) > 0 {
 					b := Blacklist{}

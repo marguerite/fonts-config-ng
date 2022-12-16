@@ -8,41 +8,32 @@ import (
 	"github.com/marguerite/fonts-config-ng/sysconfig"
 )
 
-func genBitmapLanguagesConfig(cfg sysconfig.SysConfig) string {
-	tmp := "\t<match target=\"font\">\n"
-	tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"append\">\n"
-	if cfg.Bool("USE_EMBEDDED_BITMAPS") {
-		if len(cfg.String("EMBEDDED_BITMAPS_LANGUAGES")) == 0 {
-			tmp += "\t\t\t<b>true</bool>\n"
-			tmp += "\t\t</edit>\n"
-			tmp += "\t</match>\n"
+func genBitmapLanguagesConfig(s sysconfig.Config) string {
+	tmp := "\t<match target=\"font\">\n\t\t<edit name=\"embeddedbitmap\" mode=\"append\">\n"
+	if s.Bool("USE_EMBEDDED_BITMAPS") {
+		if len(s.String("EMBEDDED_BITMAPS_LANGUAGES")) == 0 {
+			tmp += "\t\t\t<b>true</bool>\n\t\t</edit>\n\t</match>\n"
 			return tmp
 		}
-		tmp += "\t\t\t<bool>false</bool>\n"
-		tmp += "\t\t</edit>\n"
-		tmp += "\t</match>\n"
-		for _, v := range strings.Split(cfg.String("EMBEDDED_BITMAPS_LANGUAGES"), ":") {
-			tmp += "\t<match target=\"font\">\n"
-			tmp += "\t\t<test name=\"lang\" compare=\"contains\"><string>" + v + "</string></test>\n"
-			tmp += "\t\t<edit name=\"embeddedbitmap\" mode=\"append\"><bool>true</bool></edit>\n"
-			tmp += "\t</match>\n"
+		tmp += "\t\t\t<bool>false</bool>\n\t\t</edit>\n\t</match>\n"
+		for _, v := range strings.Split(s.String("EMBEDDED_BITMAPS_LANGUAGES"), ":") {
+			tmp += "\t<match target=\"font\">\n\t\t<test name=\"lang\" compare=\"contains\"><string>" + v +
+				"</string></test>\n\t\t<edit name=\"embeddedbitmap\" mode=\"append\"><bool>true</bool></edit>\n\t</match>\n"
 		}
 		return tmp
 	}
-	tmp += "\t\t\t<bool>false</bool>\n"
-	tmp += "\t\t</edit>\n"
-	tmp += "\t</match>\n"
+	tmp += "\t\t\t<bool>false</bool>\n\t\t</edit>\n\t</match>\n"
 	return tmp
 }
 
 // GenRenderingOptions generates fontconfig rendering options conf
-func GenRenderingOptions(userMode bool, cfg sysconfig.SysConfig) {
+func GenRenderingOptions(userMode bool, s sysconfig.Config) {
 	/* # reflect fonts-config syconfig variables or
 	   # parameters in fontconfig setting to control rendering */
 	renderFile := GetFcConfig("render", userMode)
 
-	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("Generating %s.", renderFile))
-	renderText := genRenderingOptions(cfg, userMode)
+	Dbg(s.Int("VERBOSITY"), Debug, fmt.Sprintf("Generating %s.", renderFile))
+	renderText := genRenderingOptions(s, userMode)
 
 	err := overwriteOrRemoveFile(renderFile, []byte(renderText))
 	if err != nil {
@@ -50,36 +41,35 @@ func GenRenderingOptions(userMode bool, cfg sysconfig.SysConfig) {
 	}
 }
 
-func genRenderingOptions(cfg sysconfig.SysConfig, userMode bool) string {
-	config := ""
-	config += genStringOptionConfig(cfg.Int("VERBOSITY"), cfg.String("FORCE_HINTSTYLE"), "Forcing hintstyle:",
+func genRenderingOptions(s sysconfig.Config, userMode bool) (cfg string) {
+	cfg += genStringOptionConfig(s.Int("VERBOSITY"), s.String("FORCE_HINTSTYLE"), "Forcing hintstyle:",
 		"<!-- Choose preferred common hinting style here.  -->\n<!-- Possible values: no, hitnone, hitslight, hintmedium and hintfull. -->\n<!-- Can be overridden with some other options, e. g. force_bw\n\tor force_bw_monospace => hintfull -->\n",
 		"force_hintstyle", false, true)
-	config += genBoolOptionConfig(cfg.Int("VERBOSITY"), cfg.Bool("FORCE_AUTOHINT"), "Forcing autohint:",
+	cfg += genBoolOptionConfig(s.Int("VERBOSITY"), s.Bool("FORCE_AUTOHINT"), "Forcing autohint:",
 		"<!-- Force autohint always. -->\n<!-- If false, for well hinted fonts, their instructions are used for rendering. -->\n",
 		"force_autohint", true)
-	config += genBoolOptionConfig(cfg.Int("VERBOSITY"), cfg.Bool("FORCE_BW"), "Forcing black and white:",
+	cfg += genBoolOptionConfig(s.Int("VERBOSITY"), s.Bool("FORCE_BW"), "Forcing black and white:",
 		"<!-- Do not use font smoothing (black&white rendering) at all.  -->\n",
 		"force_bw", true)
-	config += genBoolOptionConfig(cfg.Int("VERBOSITY"), cfg.Bool("FORCE_BW_MONOSPACE"), "Forcing black and white for good hinted monospace:",
+	cfg += genBoolOptionConfig(s.Int("VERBOSITY"), s.Bool("FORCE_BW_MONOSPACE"), "Forcing black and white for good hinted monospace:",
 		"<!-- Do not use font smoothing for some monospaced fonts.  -->\n<!-- Liberation Mono, Courier New, Andale Mono, Monaco, etc. -->\n",
 		"force_bw_monospace", true)
-	config += genStringOptionConfig(cfg.Int("VERBOSITY"), cfg.String("USE_LCDFILTER"), "Lcdfilter:",
+	cfg += genStringOptionConfig(s.Int("VERBOSITY"), s.String("USE_LCDFILTER"), "Lcdfilter:",
 		"<!-- Set LCD filter. Amend when you want use subpixel rendering. -->\n<!-- Don't forgot to set correct subpixel ordering in 'rgba' element. -->\n<!-- Possible values: lcddefault, lcdlight, lcdlegacy, lcdnone -->\n",
 		"lcdfilter", true, false)
-	config += genStringOptionConfig(cfg.Int("VERBOSITY"), cfg.String("USE_RGBA"), "Subpixel arrangement:",
+	cfg += genStringOptionConfig(s.Int("VERBOSITY"), s.String("USE_RGBA"), "Subpixel arrangement:",
 		"<!-- Set LCD subpixel arrangement and orientation.  -->\n<!-- Possible values: unknown, none, rgb, bgr, vrgb, vbgr. -->\n",
 		"rgba", true, false)
-	config += genBitmapLanguagesConfig(cfg)
-	config += genBoolOptionConfig(cfg.Int("VERBOSITY"), cfg.Bool("SEARCH_METRIC_COMPATIBLE"), "Search metric compatible fonts:",
+	cfg += genBitmapLanguagesConfig(s)
+	cfg += genBoolOptionConfig(s.Int("VERBOSITY"), s.Bool("SEARCH_METRIC_COMPATIBLE"), "Search metric compatible fonts:",
 		"<!-- Search for metric compatible families? -->\n",
 		"search_metric_aliases", false)
-	config += genUserInclude(userMode)
-	if len(config) == 0 {
-		return config
+	cfg += genUserInclude(userMode)
+	if len(cfg) == 0 {
+		return cfg
 	}
 	return genFcPreamble(userMode, "<!-- using target=\"pattern\", because we want to change pattern in 60-family-prefer.conf\n\tregarding to this setting -->\n") +
-		config + FcSuffix
+		cfg + FcSuffix
 }
 
 // validStringOption return false if a string is "null", has suffix "none" or just empty.
@@ -95,29 +85,29 @@ func genStringOptionConfig(verbosity int, opt, dbgOutput, comment, editName stri
 		return ""
 	}
 	Dbg(verbosity, Debug, fmt.Sprintf(dbgOutput+" %s", opt))
-	config := comment
-	config += "\t<match target=\"pattern\" >\n\t\t<edit name=\""
-	config += editName
-	config += "\" mode=\""
+	cfg := comment
+	cfg += "\t<match target=\"pattern\" >\n\t\t<edit name=\""
+	cfg += editName
+	cfg += "\" mode=\""
 	if force {
-		config += "assign"
+		cfg += "assign"
 	} else {
-		config += "append"
+		cfg += "append"
 	}
-	config += "\">\n\t\t\t"
+	cfg += "\">\n\t\t\t"
 	if cst {
-		config += "<const>"
+		cfg += "<const>"
 	} else {
-		config += "<string>"
+		cfg += "<string>"
 	}
-	config += opt
+	cfg += opt
 	if cst {
-		config += "</const>"
+		cfg += "</const>"
 	} else {
-		config += "</string>"
+		cfg += "</string>"
 	}
-	config += "\n\t\t</edit>\n\t</match>\n"
-	return config
+	cfg += "\n\t\t</edit>\n\t</match>\n"
+	return cfg
 }
 
 func genBoolOptionConfig(verbosity int, opt bool, dbgOutput, comment, editName string, force bool) string {
@@ -125,19 +115,19 @@ func genBoolOptionConfig(verbosity int, opt bool, dbgOutput, comment, editName s
 		return ""
 	}
 	Dbg(verbosity, Debug, fmt.Sprintf(dbgOutput+" %t", opt))
-	config := comment
-	config += "\t<match target=\"pattern\">\n\t\t<edit name=\""
-	config += editName
-	config += "\" mode=\""
+	cfg := comment
+	cfg += "\t<match target=\"pattern\">\n\t\t<edit name=\""
+	cfg += editName
+	cfg += "\" mode=\""
 	if force {
-		config += "assign"
+		cfg += "assign"
 	} else {
-		config += "append"
+		cfg += "append"
 	}
-	config += "\">\n\t\t\t<bool>"
-	config += fmt.Sprintf("%t", opt)
-	config += "</bool>\n\t\t</edit>\n\t</match>\n"
-	return config
+	cfg += "\">\n\t\t\t<bool>"
+	cfg += fmt.Sprintf("%t", opt)
+	cfg += "</bool>\n\t\t</edit>\n\t</match>\n"
+	return cfg
 }
 
 func genUserInclude(userMode bool) string {

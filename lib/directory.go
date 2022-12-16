@@ -68,7 +68,7 @@ func (f FontScale) Less(i, j int) bool {
 }
 
 // getX11FontDirs get all directories containing fonts except those in the blacklist
-func getX11FontDirs(cfg sysconfig.SysConfig) []string {
+func getX11FontDirs(cfg sysconfig.Config) []string {
 	blacklist := []string{"/usr/share/fonts", "/usr/share/fonts/encodings", "/usr/share/fonts/encodings/large"}
 	fontPaths := font.GetFontPaths()
 	var fontDirs []string
@@ -134,7 +134,7 @@ func createSymlink(d string) error {
 }
 
 // switchTTCap switch between Freetype style or X-TT style TTCap
-func switchTTCap(s string, cfg sysconfig.SysConfig) string {
+func switchTTCap(s string, cfg sysconfig.Config) string {
 	// http://x-tt.osdn.jp/xtt-1.3/INSTALL.eng.txt
 	freetypeRe := regexp.MustCompile(`:(\d):`)
 	xttRe := regexp.MustCompile(`:fn=(\d):`)
@@ -159,7 +159,7 @@ func switchTTCap(s string, cfg sysconfig.SysConfig) string {
 	return s
 }
 
-func generateObliqueFromItalic(fontScale *FontScale, cfg sysconfig.SysConfig) {
+func generateObliqueFromItalic(fontScale *FontScale, cfg sysconfig.Config) {
 	// generate an oblique entry if only italic is there and vice versa:
 	re := regexp.MustCompile(`(?i)(-[^-]+-[^-]+-[^-]+)(-[io]-)([^-]+-[^-]*-\d+-\d+-\d+-\d+-[pmc]-\d+-[^-]+-[^-]+)`)
 
@@ -180,7 +180,7 @@ func generateObliqueFromItalic(fontScale *FontScale, cfg sysconfig.SysConfig) {
 	}
 }
 
-func generateTTCap(fontScale *FontScale, cfg sysconfig.SysConfig) {
+func generateTTCap(fontScale *FontScale, cfg sysconfig.Config) {
 	// https://wiki.archlinux.org/index.php/X_Logical_Font_Description
 	if !cfg.Bool("GENERATE_TTCAP_ENTRIES") {
 		return
@@ -271,7 +271,7 @@ func decodeXLFD(s string) (string, string, string, error) {
 }
 
 // fixHomeMadeFontScales fix homemade font scale entries in d/font.scale.*
-func fixHomeMadeFontScales(d string, fontScale string, cfg sysconfig.SysConfig, fontScales *FontScale) (map[string]bool, error) {
+func fixHomeMadeFontScales(d string, fontScale string, cfg sysconfig.Config, fontScales *FontScale) (map[string]bool, error) {
 	blacklist := make(map[string]bool)
 
 	data, err := os.Open(fontScale)
@@ -321,7 +321,7 @@ func fixHomeMadeFontScales(d string, fontScale string, cfg sysconfig.SysConfig, 
 }
 
 // fixSystemFontScale fix font scale entries in d/fonts.scale file
-func fixSystemFontScale(d string, cfg sysconfig.SysConfig, fontScales *FontScale, blacklist map[string]bool) error {
+func fixSystemFontScale(d string, cfg sysconfig.Config, fontScales *FontScale, blacklist map[string]bool) error {
 	systemFileScale := filepath.Join(d, "fonts.scale")
 
 	data, err := os.Open(systemFileScale)
@@ -388,7 +388,7 @@ func writeSystemFontScale(dst string, fontScales FontScale, verbosity int) error
 	return nil
 }
 
-func fixFontScales(d string, cfg sysconfig.SysConfig) error {
+func fixFontScales(d string, cfg sysconfig.Config) error {
 	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("------\nfix fonts.scale in %s\n", d))
 
 	fontScale := FontScale{}
@@ -493,7 +493,7 @@ func applyTimestamp(timestamp, dst, fontScale, fontDir string) {
 }
 
 // makeFontScaleAndDir: make fonts.scale and fonts.dir in the provided directory.
-func makeFontScaleAndDir(d string, cfg sysconfig.SysConfig, force bool) error {
+func makeFontScaleAndDir(d string, cfg sysconfig.Config, force bool) error {
 	timestamp := filepath.Join(d, "/.fonts-config-timestamp")
 	fontScale := filepath.Join(d, "/fonts.scale")
 	fontDir := filepath.Join(d, "/fonts.dir")
@@ -553,7 +553,7 @@ func makeFontScaleAndDir(d string, cfg sysconfig.SysConfig, force bool) error {
 }
 
 // MkFontScaleDir make fonts.scale and fonts.dir in font directories based on our fonts-config options
-func MkFontScaleDir(c sysconfig.SysConfig, force bool) error {
+func MkFontScaleDir(c sysconfig.Config, force bool) error {
 	for _, d := range getX11FontDirs(c) {
 		err := makeFontScaleAndDir(d, c, force)
 		if err != nil {

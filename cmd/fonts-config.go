@@ -180,7 +180,7 @@ func main() {
 			os.Exit(0)
 		}
 
-		cfg := make(sysconfig.SysConfig)
+		cfg := make(sysconfig.Config)
 		f := ioutils.NewReaderFromFile("/etc/sysconfig/fonts-config")
 		cfg.Unmarshal(f)
 		cfg["VERBOSITY"] = verbosity

@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	fccharset "github.com/marguerite/fonts-config-ng/fc-charset"
+	"github.com/marguerite/fonts-config-ng/charset"
 	"github.com/marguerite/go-stdlib/slice"
 	"github.com/marguerite/go-stdlib/stringutils"
 )
@@ -83,7 +83,7 @@ type Font struct {
 	Slant   int
 	Spacing int
 	Outline bool
-	fccharset.Charset
+	charset.Charset
 }
 
 // NewFont generate a new Font structure from input string
@@ -117,7 +117,7 @@ func NewFont(font *Font, in string, paths map[string]string) {
 				font.Lang = strings.Split(strings.TrimSpace(arr[1]), "|")
 			}
 			if arr[0] == "charset" {
-				font.Charset = fccharset.NewCharset(strings.TrimSpace(arr[1]))
+				font.Charset = charset.NewCharset(strings.TrimSpace(arr[1]))
 			}
 		}
 	} else {
