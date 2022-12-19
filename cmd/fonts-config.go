@@ -205,7 +205,7 @@ func main() {
 		}, c.Bool("u"))
 
 		if !c.Bool("u") {
-			err := lib.MkFontScaleDir(cfg, c.Bool("force"))
+			err := lib.MkFontScaleAndFontDir(cfg, c.Bool("force"))
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -230,7 +230,7 @@ func main() {
 			if cfg.Bool("GENERATE_JAVA_FONT_SETUP") {
 				lib.GenerateJavaFontSetup(collection, cfg)
 			}
-			lib.ReloadXfsConfig(cfg.Int("VERBOSITY"))
+			lib.ReloadXorgFontServer(cfg.Int("VERBOSITY"))
 		}
 
 		return nil

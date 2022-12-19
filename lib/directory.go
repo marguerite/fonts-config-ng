@@ -68,29 +68,29 @@ func (f FontScale) Less(i, j int) bool {
 }
 
 // getX11FontDirs get all directories containing fonts except those in the blacklist
-func getX11FontDirs(cfg sysconfig.Config) []string {
-	blacklist := []string{"/usr/share/fonts", "/usr/share/fonts/encodings", "/usr/share/fonts/encodings/large"}
+func getX11FontDirs(cfg sysconfig.Config) map[string]struct{} {
+	blacklist := map[string]struct{}{"/usr/share/fonts": {}, "/usr/share/fonts/encodings": {}, "/usr/share/fonts/encodings/large": {}}
 	fontPaths := font.GetFontPaths()
-	var fontDirs []string
+	fontDirs := make(map[string]struct{})
 	for _, v := range fontPaths {
 		base := filepath.Dir(v)
-		if ok, e := slice.Contains(blacklist, base); ok && e == nil {
+		if _, ok := blacklist[base]; ok {
 			continue
 		}
-		if ok, e := slice.Contains(fontDirs, base); ok && e == nil {
+		if _, ok := fontDirs[base]; ok {
 			continue
 		}
-		fontDirs = append(fontDirs, base)
+		fontDirs[base] = struct{}{}
 	}
 
 	// usually /usr/share/fonts/cyrillic is not aquired by fc-list
-	if ok, e := slice.Contains(fontDirs, "/usr/share/fonts/cyrillic"); !ok || e != nil {
-		fontDirs = append(fontDirs, "/usr/share/fonts/cyrillic")
+	if _, ok := fontDirs["/usr/share/fonts/cyrillic"]; !ok {
+		fontDirs["/usr/share/fonts/cyrillic"] = struct{}{}
 	}
 
 	Dbg(cfg.Int("VERBOSITY"), Debug, func() string {
 		str := "--- Font Directories\n"
-		for _, d := range fontDirs {
+		for d := range fontDirs {
 			str += "\t" + d + "\n"
 		}
 		str += "---\n"
@@ -117,12 +117,12 @@ func mtimeDifferOrMissing(src, dst string) bool {
 }
 
 func createSymlink(d string) error {
-	forbiddenChars := []string{" ", ":"}
+	forbiddenChars := map[string]struct{}{" ": {}, ":": {}}
 	files, _ := dirutils.Ls(d, true, true)
 	for _, f := range files {
-		for _, v := range forbiddenChars {
-			if strings.Contains(f, v) {
-				nf := strings.Replace(f, v, "_", -1)
+		for char := range forbiddenChars {
+			if strings.Contains(f, char) {
+				nf := strings.Replace(f, char, "_", -1)
 				err := os.Symlink(f, nf)
 				if err != nil {
 					return err
@@ -360,26 +360,26 @@ func fixSystemFontScale(d string, cfg sysconfig.Config, fontScales *FontScale, b
 }
 
 // writeSystemFontScale write fontScales into dst file
-func writeSystemFontScale(dst string, fontScales FontScale, verbosity int) error {
+func writeSystemFontScale(dst string, fs FontScale, verbosity int) error {
 	Dbg(verbosity, Debug, fmt.Sprintf("writing %s ...\n", dst))
 
 	info, _ := os.Stat(dst)
 
-	file, err := os.OpenFile(dst, os.O_WRONLY, info.Mode())
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = file.WriteString(fmt.Sprintf("%d\n", len(fontScales)))
+	f, err := os.OpenFile(dst, os.O_WRONLY, info.Mode())
+	defer f.Close()
 	if err != nil {
 		return err
 	}
 
-	sort.Sort(fontScales)
+	_, err = f.WriteString(fmt.Sprintf("%d\n", len(fs)))
+	if err != nil {
+		return err
+	}
 
-	for _, font := range fontScales {
-		_, err = file.WriteString(fmt.Sprintf("%s%s %s\n", font.Option, font.Font, font.XLFD))
+	sort.Sort(fs)
+
+	for _, font := range fs {
+		_, err = f.WriteString(fmt.Sprintf("%s%s %s\n", font.Option, font.Font, font.XLFD))
 		if err != nil {
 			return err
 		}
@@ -388,41 +388,41 @@ func writeSystemFontScale(dst string, fontScales FontScale, verbosity int) error
 	return nil
 }
 
-func fixFontScales(d string, cfg sysconfig.Config) error {
-	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("------\nfix fonts.scale in %s\n", d))
+func fixFontScales(dr string, cfg sysconfig.Config) error {
+	Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("------\nfix fonts.scale in %s\n", dr))
 
-	fontScale := FontScale{}
-	blacklist := map[string]bool{}
+	var fs FontScale
+	blacklist := make(map[string]bool)
 
 	// first parse the "handmade" fonts.scale.* files:
-	handmadeScales, err := filepath.Glob(filepath.Join(d, "*fonts.scale.*"))
+	handmades, err := filepath.Glob(filepath.Join(dr, "*fonts.scale.*"))
 	if err != nil {
 		return err
 	}
 
-	for _, f := range handmadeScales {
+	for _, f := range handmades {
 		suffix := []string{".swp", ".bak", ".sav", ".save", ".rpmsave", ".rpmorig", ".rpmnew"}
 		if ok, _, _ := stringutils.Contains(f, suffix...); ok {
 			Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("%s is considered a backup file, ignored.\n", f))
 			continue
 		}
 
-		blacklist, err = fixHomeMadeFontScales(d, f, cfg, &fontScale)
+		blacklist, err = fixHomeMadeFontScales(dr, f, cfg, &fs)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Now parse the fonts.scale file automatically created by mkfontscale:
-	err = fixSystemFontScale(d, cfg, &fontScale, blacklist)
+	err = fixSystemFontScale(dr, cfg, &fs, blacklist)
 	if err != nil {
 		return err
 	}
 
-	generateObliqueFromItalic(&fontScale, cfg)
-	generateTTCap(&fontScale, cfg)
+	generateObliqueFromItalic(&fs, cfg)
+	generateTTCap(&fs, cfg)
 
-	err = writeSystemFontScale(filepath.Join(d, "fonts.scale"), fontScale, cfg.Int("VERBOSITY"))
+	err = writeSystemFontScale(filepath.Join(dr, "fonts.scale"), fs, cfg.Int("VERBOSITY"))
 	if err != nil {
 		return err
 	}
@@ -441,32 +441,31 @@ func chkScaleAndDirUpdate(dst, timestamp, fontScale, fontDir string, verbosity i
 	return false
 }
 
-func cleanScaleAndDir(fontScale, fontDir string) {
-	for _, d := range []string{fontScale, fontDir} {
-		os.Remove(d)
-	}
+func cleanFontScaleAndFontDir(fs, fd string) {
+	os.Remove(fs)
+	os.Remove(fd)
 }
 
-// createEmptyScaleFile if fonts.scale is not there as expected, create an empty one
-func createEmptyFontScaleFile(fontScale string, verbosity int) bool {
-	if _, err := os.Stat(fontScale); os.IsNotExist(err) {
+// touchFontScale if fonts.scale is not there as expected, create an empty one
+func touchFontScale(fs string, verbosity int) bool {
+	if _, err := os.Stat(fs); os.IsNotExist(err) {
 		Dbg(verbosity, Debug, "mkfontscale is not available or it failed\n-> creating an empty fonts.scale file.")
-		fileutils.Touch(fontScale)
+		fileutils.Touch(fs)
 		return true
 	}
 	return false
 }
 
 // createOrCopyFontDirFile create an empty fonts.dir file or copy fonts.scale as fonts.dir
-func createOrCopyFontDirFile(fontDir, fontScale string, verbosity int) bool {
-	if _, err := os.Stat(fontDir); os.IsNotExist(err) {
+func createOrCopyFontDirFile(fd, fs string, verbosity int) bool {
+	if _, err := os.Stat(fd); os.IsNotExist(err) {
 		Dbg(verbosity, Debug, "mkfontdir is not available or it failed -> ")
-		if _, err := os.Stat(fontScale); !os.IsNotExist(err) {
+		if _, err := os.Stat(fs); !os.IsNotExist(err) {
 			Dbg(verbosity, Debug, "a fonts.scale file exists, copy it to fonts.dir.")
-			fileutils.Copy(fontScale, fontDir)
+			fileutils.Copy(fs, fd)
 		} else {
 			Dbg(verbosity, Debug, "no fonts.scale exists either, create an empty fonts.dir.")
-			fileutils.Touch(fontDir)
+			fileutils.Touch(fd)
 		}
 		return true
 	}
@@ -493,16 +492,17 @@ func applyTimestamp(timestamp, dst, fontScale, fontDir string) {
 }
 
 // makeFontScaleAndDir: make fonts.scale and fonts.dir in the provided directory.
-func makeFontScaleAndDir(d string, cfg sysconfig.Config, force bool) error {
+func makeFontScaleAndFontDir(d string, cfg sysconfig.Config, force bool) error {
 	timestamp := filepath.Join(d, "/.fonts-config-timestamp")
-	fontScale := filepath.Join(d, "/fonts.scale")
-	fontDir := filepath.Join(d, "/fonts.dir")
+	fs := filepath.Join(d, "/fonts.scale")
+	fd := filepath.Join(d, "/fonts.dir")
+	var tryAgain bool
 
-	if force || chkScaleAndDirUpdate(d, timestamp, fontScale, fontDir, cfg.Int("VERBOSITY")) {
+	if force || chkScaleAndDirUpdate(d, timestamp, fs, fd, cfg.Int("VERBOSITY")) {
 
 		Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("%s: creating fonts.{scale,dir}\n", d))
 
-		cleanScaleAndDir(fontScale, fontDir)
+		cleanFontScaleAndFontDir(fs, fd)
 		createSymlink(d)
 
 		if _, err := os.Stat("/usr/bin/mkfontscale"); !os.IsNotExist(err) {
@@ -510,7 +510,7 @@ func makeFontScaleAndDir(d string, cfg sysconfig.Config, force bool) error {
 			Dbg(cfg.Int("VERBOSITY"), Debug, string(cmd)+"\n")
 		}
 
-		tryAgain := createEmptyFontScaleFile(fontScale, cfg.Int("VERBOSITY"))
+		tryAgain = touchFontScale(fs, cfg.Int("VERBOSITY"))
 
 		err := fixFontScales(d, cfg)
 		if err != nil {
@@ -518,19 +518,19 @@ func makeFontScaleAndDir(d string, cfg sysconfig.Config, force bool) error {
 		}
 
 		if _, err := os.Stat("/usr/bin/mkfontdir"); !os.IsNotExist(err) {
-			cmdFlags := []string{}
+			flags := make([]string, 5)
 			for _, v := range []string{"/usr/share/fonts/encodings", "/usr/share/fonts/encodings/large"} {
 				if _, err := os.Stat(v); !os.IsNotExist(err) {
-					cmdFlags = append(cmdFlags, "-e")
-					cmdFlags = append(cmdFlags, v)
+					flags = append(flags, "-e")
+					flags = append(flags, v)
 				}
 			}
-			cmdFlags = append(cmdFlags, d)
-			cmd, _ := exec.Command("/usr/bin/mkfontdir", cmdFlags...).Output()
+			flags = append(flags, d)
+			cmd, _ := exec.Command("/usr/bin/mkfontdir", flags...).Output()
 			Dbg(cfg.Int("VERBOSITY"), Debug, string(cmd)+"\n")
 		}
 
-		tryAgain = createOrCopyFontDirFile(fontDir, fontScale, cfg.Int("VERBOSITY"))
+		tryAgain = createOrCopyFontDirFile(fd, fs, cfg.Int("VERBOSITY"))
 
 		// Directory done. Now update time stamps:
 		if tryAgain {
@@ -544,7 +544,7 @@ func makeFontScaleAndDir(d string, cfg sysconfig.Config, force bool) error {
 			   (fc-cache does this as well when the cache files are out of date
 			   but it can't hurt to remove them here as well just to make sure). */
 			rmFontCache(d)
-			applyTimestamp(timestamp, d, fontScale, fontDir)
+			applyTimestamp(timestamp, d, fs, fd)
 		}
 
 	}
@@ -553,9 +553,9 @@ func makeFontScaleAndDir(d string, cfg sysconfig.Config, force bool) error {
 }
 
 // MkFontScaleDir make fonts.scale and fonts.dir in font directories based on our fonts-config options
-func MkFontScaleDir(c sysconfig.Config, force bool) error {
-	for _, d := range getX11FontDirs(c) {
-		err := makeFontScaleAndDir(d, c, force)
+func MkFontScaleAndFontDir(c sysconfig.Config, force bool) error {
+	for d := range getX11FontDirs(c) {
+		err := makeFontScaleAndFontDir(d, c, force)
 		if err != nil {
 			return err
 		}

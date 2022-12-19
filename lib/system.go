@@ -44,8 +44,8 @@ func FpRehash(verbosity int) {
 	}
 }
 
-// ReloadXfsConfig reload Xorg Font Server on the running system
-func ReloadXfsConfig(verbosity int) {
+// ReloadXorgFontServer reload Xorg Font Server on the running system
+func ReloadXorgFontServer(verbosity int) {
 	if cmd, err := exec.Search("/usr/bin/ps"); err == nil {
 		out, _, _ := exec.Exec3(cmd, "-C", "xfs", "-o", "pid=")
 		pid := strings.TrimSpace(string(out))
