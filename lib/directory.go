@@ -180,7 +180,7 @@ func generateObliqueFromItalic(fontScale *FontScale, cfg sysconfig.Config) {
 	}
 }
 
-func generateTTCap(fontScale *FontScale, cfg sysconfig.Config) {
+func generateTTCap(fs *FontScale, cfg sysconfig.Config) {
 	// https://wiki.archlinux.org/index.php/X_Logical_Font_Description
 	if !cfg.Bool("GENERATE_TTCAP_ENTRIES") {
 		return
@@ -193,7 +193,7 @@ func generateTTCap(fontScale *FontScale, cfg sysconfig.Config) {
 	artificialItalic := "ai=0.2:"
 	doubleStrike := "ds=y:"
 
-	for _, f := range *fontScale {
+	for _, f := range *fs {
 		// don't touch existing TTCap options.
 		if re.MatchString(f.XLFD) {
 			if ok, _, _ := stringutils.Contains(f.Font, suffix...); !ok {
@@ -212,35 +212,35 @@ func generateTTCap(fontScale *FontScale, cfg sysconfig.Config) {
 			boldItalic := strings.Replace(f.XLFD, "-medium-r-", "-medium-i-", 1)
 			boldOblique := strings.Replace(f.XLFD, "-medium-r-", "-meidum-i-", 1)
 
-			if _, ok := fontScale.Find(italic); ok {
-				slice.Concat(fontScale, FontScaleEntry{f.Font, italic, artificialItalic})
+			if _, ok := fs.Find(italic); ok {
+				slice.Concat(fs, FontScaleEntry{f.Font, italic, artificialItalic})
 				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", artificialItalic+f.Font, italic))
 			}
 
-			if _, ok := fontScale.Find(oblique); ok {
-				slice.Concat(fontScale, FontScaleEntry{f.Font, oblique, artificialItalic})
+			if _, ok := fs.Find(oblique); ok {
+				slice.Concat(fs, FontScaleEntry{f.Font, oblique, artificialItalic})
 				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", artificialItalic+f.Font, oblique))
 			}
 
-			if _, ok := fontScale.Find(bold); ok {
-				slice.Concat(fontScale, FontScaleEntry{f.Font, bold, doubleStrike})
+			if _, ok := fs.Find(bold); ok {
+				slice.Concat(fs, FontScaleEntry{f.Font, bold, doubleStrike})
 				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", doubleStrike+f.Font, bold))
 			}
 
-			if _, ok := fontScale.Find(boldItalic); ok {
-				slice.Concat(fontScale, FontScaleEntry{f.Font, boldItalic, doubleStrike + artificialItalic})
+			if _, ok := fs.Find(boldItalic); ok {
+				slice.Concat(fs, FontScaleEntry{f.Font, boldItalic, doubleStrike + artificialItalic})
 				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", doubleStrike+artificialItalic+f.Font, boldItalic))
 			}
 
-			if _, ok := fontScale.Find(boldOblique); ok {
-				slice.Concat(fontScale, FontScaleEntry{f.Font, boldOblique, doubleStrike + artificialItalic})
+			if _, ok := fs.Find(boldOblique); ok {
+				slice.Concat(fs, FontScaleEntry{f.Font, boldOblique, doubleStrike + artificialItalic})
 				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("generated TTCap entry: %s %s\n", doubleStrike+artificialItalic+f.Font, boldOblique))
 			}
 		}
 	}
 
 	// add bw=0.5 option when necessary:
-	for _, f := range *fontScale {
+	for _, f := range *fs {
 
 		if ok, _, _ := stringutils.Contains(f.Font, suffix...); !ok {
 			// the freetype module handles TrueType, OpenType, and Type1 fonts.
@@ -253,7 +253,7 @@ func generateTTCap(fontScale *FontScale, cfg sysconfig.Config) {
 		}
 
 		if strings.Contains(f.XLFD, "c-0-jisx0201.1976-0") {
-			slice.Replace(fontScale, f, FontScaleEntry{f.Font, f.XLFD, f.Option + "bw=0.5:"})
+			slice.Replace(fs, f, FontScaleEntry{f.Font, f.XLFD, f.Option + "bw=0.5:"})
 			Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("added bw=0.5 option: %s %s\n", f.Option+"bw=0.5:"+f.Font, f.XLFD))
 		}
 	}
