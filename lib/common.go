@@ -62,17 +62,18 @@ func GetFcConfig(c string, userMode bool) string {
 	return filepath.Join(prefix, m[c][0])
 }
 
-//overwriteOrRemoveFile Overwrite file with new content or completely remove the file.
+// overwriteOrRemoveFile Overwrite file with new content or completely remove the file.
 func overwriteOrRemoveFile(path string, content []byte) error {
 	os.Remove(path)
 	if len(content) == 0 {
 		return nil
 	}
 	f, err := os.Create(path)
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
+
 	n, err := f.Write(content)
 	if n != len(content) {
 		return fmt.Errorf("not fully written")

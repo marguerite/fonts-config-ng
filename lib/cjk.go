@@ -7,7 +7,7 @@ import (
 	"github.com/marguerite/go-stdlib/slice"
 )
 
-//GenCJKConfig generate cjk specific fontconfig configuration like
+// GenCJKConfig generate cjk specific fontconfig configuration like
 // special matrix adjustment for "Noto Sans/Serif", dual-width Asian fonts and etc.
 func GenCJKConfig(c ft.Collection, userMode bool) {
 	conf := GetFcConfig("cjk", userMode)
@@ -18,7 +18,7 @@ func GenCJKConfig(c ft.Collection, userMode bool) {
 	overwriteOrRemoveFile(conf, []byte(text))
 }
 
-//isSpacingDual find spacing=dual/mono/charcell
+// isSpacingDual find spacing=dual/mono/charcell
 func isSpacingDual(font ft.Font) int {
 	if font.Spacing > 90 && !font.Outline {
 		return 1
@@ -29,7 +29,7 @@ func isSpacingDual(font ft.Font) int {
 	return -1
 }
 
-//isCJKFont find if a font supports CJK
+// isCJKFont find if a font supports CJK
 func isCJKFont(font ft.Font) bool {
 	supportedLangs := []string{"zh", "ja", "ko", "zh-cn", "zh-tw", "zh-hk", "zh-mo", "zh-sg"}
 	if ok, err := slice.Contains(font.Lang, supportedLangs); ok && err == nil {
@@ -38,7 +38,7 @@ func isCJKFont(font ft.Font) bool {
 	return false
 }
 
-//fixDualAsianFonts fix rendering of dual-width Asian fonts (spacing=dual)
+// fixDualAsianFonts fix rendering of dual-width Asian fonts (spacing=dual)
 func fixDualAsianFonts(c ft.Collection) string {
 	comment := "<!-- The dual-width Asian fonts (spacing=dual) are not rendered correctly," +
 		"apparently FreeType forces all widths to match.\n" +
@@ -63,7 +63,7 @@ func ppd(generic, lang string) string {
 	if lang != "ja" {
 		return ""
 	}
-	m := map[string][]string{"Sans": []string{"IPAPGothic", "IPAexGothic", "M+ 1c", "M+ 1p", "VL PGothic"}, "Serif": []string{"IPAPMincho", "IPAexMincho"}, "monospace": []string{"IPAGothic", "M+ 1m", "VL Gothic"}}
+	m := map[string][]string{"Sans": {"IPAPGothic", "IPAexGothic", "M+ 1c", "M+ 1p", "VL PGothic"}, "Serif": {"IPAPMincho", "IPAexMincho"}, "monospace": {"IPAGothic", "M+ 1m", "VL Gothic"}}
 	var str string
 	for _, v := range m[generic] {
 		str += "\t\t\t<string>" + v + "</string>\n"
@@ -93,13 +93,13 @@ func apd(generic, lang string) string {
 }
 
 func genNotoCJK() string {
-	order := map[string][]string{"zh-cn": []string{"SC", "HK", "TW", "JP", "KR"},
-		"zh-tw": []string{"TC", "HK", "SC", "JP", "KR"},
-		"zh-hk": []string{"HK", "TC", "SC", "JP", "KR"},
-		"zh-mo": []string{"HK", "SC", "TC", "JP", "KR"},
-		"zh-sg": []string{"SC", "HK", "TW", "JP", "KR"},
-		"ja":    []string{"JP", "KR", "HK", "TW", "SC"},
-		"ko":    []string{"KR", "JP", "HK", "TW", "SC"}}
+	order := map[string][]string{"zh-cn": {"SC", "HK", "TW", "JP", "KR"},
+		"zh-tw": {"TC", "HK", "SC", "JP", "KR"},
+		"zh-hk": {"HK", "TC", "SC", "JP", "KR"},
+		"zh-mo": {"HK", "SC", "TC", "JP", "KR"},
+		"zh-sg": {"SC", "HK", "TW", "JP", "KR"},
+		"ja":    {"JP", "KR", "HK", "TW", "SC"},
+		"ko":    {"KR", "JP", "HK", "TW", "SC"}}
 
 	str := `<!--
    Currently we use region-specific Subset OpenType/CFF (Subset OTF)

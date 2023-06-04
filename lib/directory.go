@@ -267,7 +267,7 @@ func decodeXLFD(s string) (string, string, string, error) {
 		m := re.FindStringSubmatch(s)
 		return m[1], m[2], m[3], nil
 	}
-	return "", "", "", fmt.Errorf("Not a valid XLFD description")
+	return "", "", "", fmt.Errorf("not a valid XLFD description")
 }
 
 // fixHomeMadeFontScales fix homemade font scale entries in d/font.scale.*
@@ -366,10 +366,10 @@ func writeSystemFontScale(dst string, fs FontScale, verbosity int) error {
 	info, _ := os.Stat(dst)
 
 	f, err := os.OpenFile(dst, os.O_WRONLY, info.Mode())
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	_, err = f.WriteString(fmt.Sprintf("%d\n", len(fs)))
 	if err != nil {
@@ -447,13 +447,11 @@ func cleanFontScaleAndFontDir(fs, fd string) {
 }
 
 // touchFontScale if fonts.scale is not there as expected, create an empty one
-func touchFontScale(fs string, verbosity int) bool {
+func touchFontScale(fs string, verbosity int) {
 	if _, err := os.Stat(fs); os.IsNotExist(err) {
 		Dbg(verbosity, Debug, "mkfontscale is not available or it failed\n-> creating an empty fonts.scale file.")
 		fileutils.Touch(fs)
-		return true
 	}
-	return false
 }
 
 // createOrCopyFontDirFile create an empty fonts.dir file or copy fonts.scale as fonts.dir
@@ -496,7 +494,6 @@ func makeFontScaleAndFontDir(d string, cfg sysconfig.Config, force bool) error {
 	timestamp := filepath.Join(d, "/.fonts-config-timestamp")
 	fs := filepath.Join(d, "/fonts.scale")
 	fd := filepath.Join(d, "/fonts.dir")
-	var tryAgain bool
 
 	if force || chkScaleAndDirUpdate(d, timestamp, fs, fd, cfg.Int("VERBOSITY")) {
 
@@ -510,7 +507,7 @@ func makeFontScaleAndFontDir(d string, cfg sysconfig.Config, force bool) error {
 			Dbg(cfg.Int("VERBOSITY"), Debug, string(cmd)+"\n")
 		}
 
-		tryAgain = touchFontScale(fs, cfg.Int("VERBOSITY"))
+		touchFontScale(fs, cfg.Int("VERBOSITY"))
 
 		err := fixFontScales(d, cfg)
 		if err != nil {
@@ -530,7 +527,7 @@ func makeFontScaleAndFontDir(d string, cfg sysconfig.Config, force bool) error {
 			Dbg(cfg.Int("VERBOSITY"), Debug, string(cmd)+"\n")
 		}
 
-		tryAgain = createOrCopyFontDirFile(fd, fs, cfg.Int("VERBOSITY"))
+		tryAgain := createOrCopyFontDirFile(fd, fs, cfg.Int("VERBOSITY"))
 
 		// Directory done. Now update time stamps:
 		if tryAgain {
