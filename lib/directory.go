@@ -83,7 +83,7 @@ func getX11FontDirs(cfg sysconfig.Config) map[string]struct{} {
 		fontDirs[base] = struct{}{}
 	}
 
-	// usually /usr/share/fonts/cyrillic is not aquired by fc-list
+	// usually /usr/share/fonts/cyrillic is not acquired by fc-list
 	if _, ok := fontDirs["/usr/share/fonts/cyrillic"]; !ok {
 		fontDirs["/usr/share/fonts/cyrillic"] = struct{}{}
 	}

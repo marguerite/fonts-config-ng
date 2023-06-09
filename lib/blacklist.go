@@ -29,7 +29,7 @@ type Blacklist struct {
 
 // GenEmojiBlacklist generate 81-emoji-blacklist-glyphs.conf
 // 1. blacklist charsets < 200d in emoji fonts, they are everywhere and non-emoji
-// 2. balcklist emoji unicode codepoints in other fonts
+// 2. blacklist emoji unicode codepoints in other fonts
 func GenEmojiBlacklist(collection ft.Collection, userMode bool, cfg sysconfig.Config) {
 	emojis := getEmojiFonts(collection)
 

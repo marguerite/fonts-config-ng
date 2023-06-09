@@ -64,7 +64,7 @@ func (c Charset) Intersect(c1 Charset) Charset {
 
 // Union merge c and c1 to c2
 func (c Charset) Union(c1 Charset) (c4 Charset) {
-	c2 := c.Substract(c1)
+	c2 := c.Subtract(c1)
 	c3 := c1
 
 	for _, v := range c2 {
@@ -95,8 +95,8 @@ func (c Charset) Union(c1 Charset) (c4 Charset) {
 	return c4
 }
 
-// Substract substract the CharsetRanges in c1 from c
-func (c Charset) Substract(c1 Charset) (c2 Charset) {
+// Subtract subtract the CharsetRanges in c1 from c
+func (c Charset) Subtract(c1 Charset) (c2 Charset) {
 	for _, v := range c {
 		idx := 0
 		for i, v1 := range c1 {
@@ -106,7 +106,7 @@ func (c Charset) Substract(c1 Charset) (c2 Charset) {
 				continue
 			case 1:
 				r := CharsetRange{v.Min, v1.Min - 1, int(v1.Min - v.Min)}
-				tc := Charset([]CharsetRange{r}).Substract(c1[:i])
+				tc := Charset([]CharsetRange{r}).Subtract(c1[:i])
 				if len(tc) > 0 {
 					for _, v2 := range tc {
 						c2.Append(v2)
@@ -116,7 +116,7 @@ func (c Charset) Substract(c1 Charset) (c2 Charset) {
 				}
 			case -1:
 				r := CharsetRange{v1.Max + 1, v.Max, int(v.Max - v1.Max)}
-				tc := Charset([]CharsetRange{r}).Substract(c1[i+1:])
+				tc := Charset([]CharsetRange{r}).Subtract(c1[i+1:])
 				if len(tc) > 0 {
 					for _, v2 := range tc {
 						c2.Append(v2)
@@ -128,7 +128,7 @@ func (c Charset) Substract(c1 Charset) (c2 Charset) {
 			case 0.5:
 				if v.Min == v1.Min {
 					r := CharsetRange{v1.Max + 1, v.Max, int(v.Max - v1.Max)}
-					tc := Charset([]CharsetRange{r}).Substract(c1[i+1:])
+					tc := Charset([]CharsetRange{r}).Subtract(c1[i+1:])
 					if len(tc) > 0 {
 						for _, v2 := range tc {
 							c2.Append(v2)
@@ -140,7 +140,7 @@ func (c Charset) Substract(c1 Charset) (c2 Charset) {
 				}
 				if v.Max == v1.Max {
 					r := CharsetRange{v.Min, v1.Min - 1, int(v1.Min - v.Min)}
-					tc := Charset([]CharsetRange{r}).Substract(c1[:i])
+					tc := Charset([]CharsetRange{r}).Subtract(c1[:i])
 					if len(tc) > 0 {
 						for _, v2 := range tc {
 							c2.Append(v2)
@@ -151,7 +151,7 @@ func (c Charset) Substract(c1 Charset) (c2 Charset) {
 					continue
 				}
 				r := CharsetRange{v1.Max + 1, v.Max, int(v.Max - v1.Max)}
-				tc := Charset([]CharsetRange{r}).Substract(c1[i+1:])
+				tc := Charset([]CharsetRange{r}).Subtract(c1[i+1:])
 				if len(tc) > 0 {
 					for _, v2 := range tc {
 						c2.Append(v2)
@@ -160,7 +160,7 @@ func (c Charset) Substract(c1 Charset) (c2 Charset) {
 					c2.Append(r)
 				}
 				r1 := CharsetRange{v.Min, v1.Min - 1, int(v1.Min - v.Min)}
-				tc1 := Charset([]CharsetRange{r1}).Substract(c1[:i])
+				tc1 := Charset([]CharsetRange{r1}).Subtract(c1[:i])
 				if len(tc1) > 0 {
 					for _, v2 := range tc1 {
 						c2.Append(v2)
