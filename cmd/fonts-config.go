@@ -228,7 +228,7 @@ func main() {
 			lib.FcCache(cfg.Int("VERBOSITY"))
 			lib.FpRehash(cfg.Int("VERBOSITY"))
 			if cfg.Bool("GENERATE_JAVA_FONT_SETUP") {
-				lib.GenerateJavaFontSetup(collection, cfg)
+				lib.GenerateJavaFontSetup(collection)
 			}
 			lib.ReloadXorgFontServer(cfg.Int("VERBOSITY"))
 		}

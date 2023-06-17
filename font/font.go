@@ -15,7 +15,7 @@ import (
 	"github.com/marguerite/go-stdlib/stringutils"
 )
 
-//Collection A collection of type Font
+// Collection A collection of type Font
 type Collection []Font
 
 // NewCollection Initialize a new collection of Font from system installed fonts queried by fc-cat.
@@ -73,7 +73,7 @@ func (c Collection) FilterNameList(list *[]string) {
 	}
 }
 
-//Font font struct with informations we need
+// Font font struct with informations we need
 type Font struct {
 	File    string
 	Name    []string

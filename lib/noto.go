@@ -7,7 +7,7 @@ import (
 	"github.com/marguerite/go-stdlib/slice"
 )
 
-//GenNotoConfig generate fontconfig for Noto Fonts
+// GenNotoConfig generate fontconfig for Noto Fonts
 func GenNotoConfig(c ft.Collection, userMode bool) {
 	c = c.FindByName("Noto")
 	family := genNotoDefaultFamily(c, userMode)
@@ -84,7 +84,7 @@ func genNotoConfig(c ft.Collection, userMode bool) string {
 		FcSuffix
 }
 
-//genDefaultFamily generate default family fontconfig block for font name
+// genDefaultFamily generate default family fontconfig block for font name
 func genDefaultFamily(name string) string {
 	str := "\t<alias>\n\t\t<family>" + name + "</family>\n\t\t<default>\n\t\t\t<family>"
 	str += getGenericFamily(name)
@@ -92,7 +92,7 @@ func genDefaultFamily(name string) string {
 	return str
 }
 
-//getGenericFamily get generic name through font name
+// getGenericFamily get generic name through font name
 func getGenericFamily(name string) string {
 	if strings.Contains(name, " Symbols") {
 		return "symbol"

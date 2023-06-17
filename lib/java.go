@@ -1,16 +1,15 @@
 package lib
 
 import (
-	"bufio"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"text/template"
 
 	ft "github.com/marguerite/fonts-config-ng/font"
-	"github.com/marguerite/fonts-config-ng/sysconfig"
 	dirutils "github.com/marguerite/go-stdlib/dir"
-	"github.com/marguerite/go-stdlib/ioutils"
 )
 
 var (
@@ -52,24 +51,52 @@ var (
 		"Noto Sans TC":         "-goog-noto sans tc-",
 		"Noto Sans KR":         "-goog-noto sans kr-"}
 
-	DEFAULT_JAVA_FPL = map[string][]string{
-		"SANS_JAPANESE":             {"MS Gothic", "HGGothicB", "IPAPGothic", "IPAexGothic", "Sazanami Gothic"},
-		"SERIF_JAPANESE":            {"MS Mincho", "HGMinchoL", "IPAPMincho", "IPAexMincho", "Sazanami Mincho"},
-		"MONO_JAPANESE":             {"MS Gothic", "HGGothicB", "IPAGothic", "Sazanamii Gothic"},
-		"SANS_SIMPLIFIED_CHINESE":   {"Noto Sans SC:style=Regular:weight=80", "FZsongTi", "AR PL ShanHeiSun Uni", "AR PL SungtiL GB"},
-		"SERIF_SIMPLIFIED_CHINESE":  {"Noto Serif SC:style=Regular:weight=80", "FZsongTi", "AR PL ShanHeiSun Uni", "AR PL SungtiL GB"},
-		"SANS_TRADITIONAL_CHINESE":  {"Noto Sans TC:style=Regular:weight=80", "AR PL ShanHeiSun Uni", "FZMingTiB", "AR PL Mingti2L Big5"},
-		"SERIF_TRADITIONAL_CHINESE": {"Noto Serif TC:style=Regular:weight=80", "AR PL ShanHeiSun Uni", "FZMingTiB", "AR PL Mingti2L Big5"},
-		"SANS_KOREAN":               {"Noto Sans KR:style=Regular:weight=80", "UnDotum", "Baekmuk Gulim", "Baekmuk Dotum"},
-		"SERIF_KOREAN":              {"Noto Serif KR:style=Regular:weight=80", "UnBatang", "Baekmuk Batang"},
-		"SANS_LATIN1":               {"DejaVu Sans:style=Book:width=100", "Liberation Sans:style=Regular", "Droid Sans:style=Regular"},
-		"SERIF_LATIN1":              {"DejaVu Serif:style=Book:width=100", "Liberation Serif:style=Regular", "Droid Serif:style=Regular"},
-		"MONO_LATIN1":               {"DejaVu Sans Mono:style=Book", "Liberation Mono:style=Regular", "Droid Sans Mono:style=Regular"},
+	DEFAULT_JAVA_FPLISTS = FamilyPreferLists{
+		NewFamilyPreferList("SANS_JAPANESE", "MS Gothic", "HGGothicB", "IPAPGothic", "IPAexGothic", "Sazanami Gothic"),
+		NewFamilyPreferList("SERIF_JAPANESE", "MS Mincho", "HGMinchoL", "IPAPMincho", "IPAexMincho", "Sazanami Mincho"),
+		NewFamilyPreferList("MONO_JAPANESE", "MS Gothic", "HGGothicB", "IPAGothic", "Sazanamii Gothic"),
+		NewFamilyPreferList("SANS_SIMPLIFIED_CHINESE", "Noto Sans SC:style=Regular:weight=80", "FZsongTi"),
+		NewFamilyPreferList("SERIF_SIMPLIFIED_CHINESE", "Noto Serif SC:style=Regular:weight=80", "FZsongTi"),
+		NewFamilyPreferList("SANS_TRADITIONAL_CHINESE", "Noto Sans TC:style=Regular:weight=80", "AR PL ShanHeiSun Uni", "FZMingTiB", "AR PL Mingti2L Big5"),
+		NewFamilyPreferList("SERIF_TRADITIONAL_CHINESE", "Noto Serif TC:style=Regular:weight=80", "AR PL ShanHeiSun Uni", "FZMingTiB", "AR PL Mingti2L Big5"),
+		NewFamilyPreferList("SANS_KOREAN", "Noto Sans KR:style=Regular:weight=80", "UnDotum", "Baekmuk Gulim", "Baekmuk Dotum"),
+		NewFamilyPreferList("SERIF_KOREAN", "Noto Serif KR:style=Regular:weight=80", "UnBatang", "Baekmuk Batang"),
+		NewFamilyPreferList("SANS_LATIN1", "DejaVu Sans:style=Book:width=100", "Liberation Sans:style=Regular", "Droid Sans:style=Regular"),
+		NewFamilyPreferList("SERIF_LATIN1", "DejaVu Serif:style=Book:width=100", "Liberation Serif:style=Regular", "Droid Serif:style=Regular"),
+		NewFamilyPreferList("MONO_LATIN1", "DejaVu Sans Mono:style=Book", "Liberation Mono:style=Regular", "Droid Sans Mono:style=Regular"),
+	}
+)
+
+type Java_XLFD struct {
+	XLFD    string
+	NoSpace string
+	File    string
+}
+
+func selectJavaFonts(c ft.Collection) map[string]Java_XLFD {
+	re := regexp.MustCompile(`([^:]+)(:.*)?$`)
+	m := make(map[string]Java_XLFD)
+	for _, v := range DEFAULT_JAVA_FPLISTS {
+		var found bool
+		for _, v1 := range v.List {
+			c1 := c.FindByName(re.ReplaceAllString(v1.Item, `$1`))
+			if len(c1) > 0 {
+				found = true
+				xlfd := getJavaXLFD(c1[0].Name[0])
+				m[v.GenericName] = Java_XLFD{xlfd, strings.ReplaceAll(xlfd, " ", "_"), c1[0].File}
+				break
+			}
+		}
+		if !found {
+			if val, ok := DEFAULT_JAVA_FONTS[v.GenericName]; ok {
+				m[v.GenericName] = Java_XLFD{val[1], strings.ReplaceAll(val[1], " ", "_"), val[0]}
+			}
+		}
 	}
 
-	XLFD_REGEX = regexp.MustCompile(`_(\w+_\w+(_\w+_)?)_XLFD_(\w+_\w+_)?`)
-	FILE_REGEX = regexp.MustCompile(`_(\w+_\w+(_\w+_)?)_FILE_`)
-)
+	m["X11FONTDIR"] = Java_XLFD{"", "", "/usr/share/fonts/truetype"}
+	return m
+}
 
 func getJavaXLFD(name string) string {
 	if str, ok := DEFAULT_JAVA_XLFDS[name]; ok {
@@ -79,78 +106,25 @@ func getJavaXLFD(name string) string {
 }
 
 // GenerateJavaFontSetup generates fontconfig properties conf for java
-func GenerateJavaFontSetup(c ft.Collection, cfg sysconfig.Config) error {
+func GenerateJavaFontSetup(c ft.Collection) error {
 	Dbg(cfg.Int("VERBOSITY"), Verbose, "Generating java font setup ...\n")
 
-	tmpl := ioutils.NewReaderFromFile("/usr/share/fonts-config/fontconfig.SUSE.properties.template")
-
-	fonts := make(map[string][]string)
-	re := regexp.MustCompile(`([^:]+)(:.*)?$`)
-	for k, v := range DEFAULT_JAVA_FPL {
-		found := false
-		for _, font := range v {
-			c1 := c.FindByName(re.ReplaceAllString(font, `$1`))
-			if len(c1) > 0 {
-				fonts[k] = []string{c1[0].File, getJavaXLFD(c1[0].Name[0])}
-				found = true
-				break
-			}
-		}
-		if !found {
-			if val, ok := DEFAULT_JAVA_FONTS[k]; ok {
-				fonts[k] = val
-			}
-		}
+	tmpl, err := template.ParseFiles("/usr/share/fonts-config/fontconfig.SUSE.properties.template")
+	if err != nil {
+		panic(err)
 	}
 
-	Dbg(cfg.Int("VERBOSITY"), Debug, func(fonts map[string][]string) string {
+	fonts := selectJavaFonts(c)
+
+	Dbg(cfg.Int("VERBOSITY"), Debug, func(fonts map[string]Java_XLFD) string {
 		var str string
 		for k, v := range fonts {
-			str += fmt.Sprintf("%s_file=%s\n", k, v[0])
-			str += fmt.Sprintf("%s_xlfd=%s\n", k, v[1])
-			str += fmt.Sprintf("%s_xlfd_no_space=%s\n", k, strings.ReplaceAll(v[1], " ", "_"))
+			str += fmt.Sprintf("%s_file=%s\n", k, v.File)
+			str += fmt.Sprintf("%s_xlfd=%s\n", k, v.XLFD)
+			str += fmt.Sprintf("%s_xlfd_no_space=%s\n", k, v.NoSpace)
 		}
 		return str
 	}, fonts)
-
-	scanner := bufio.NewScanner(tmpl)
-
-	var text string
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		if len(line) == 0 {
-			text += "\n"
-		}
-		if strings.Contains(line, "_XLFD_") {
-			m := XLFD_REGEX.FindStringSubmatch(line)
-			val, ok := fonts[m[1]]
-			if !ok {
-				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("cannot find value for %s to replace.\n", m[0]))
-				continue
-			}
-			if m[len(m)-1] == "NO_SPACE_" {
-				line = strings.ReplaceAll(line, m[0], strings.ReplaceAll(val[1], " ", "_"))
-			} else {
-				line = strings.ReplaceAll(line, m[0], strings.ReplaceAll(val[1], " ", "_"))
-			}
-		}
-		if strings.Contains(line, "_FILE_") {
-			m := FILE_REGEX.FindStringSubmatch(line)
-			val, ok := fonts[m[1]]
-			if !ok {
-				Dbg(cfg.Int("VERBOSITY"), Debug, fmt.Sprintf("cannot find value for %s to replace.\n", m[0]))
-				continue
-			}
-			line = strings.ReplaceAll(line, m[0], val[0])
-		}
-		if strings.Contains(line, "_X11FONTDIR_") {
-			line = strings.ReplaceAll(line, "_X11FONTDIR_", "/usr/share/fonts/truetype")
-		}
-		if len(line) != 0 {
-			text += line + "\n"
-		}
-	}
 
 	paths, err := dirutils.Glob("/usr/lib*/jvm/*/jre/lib")
 	if err != nil {
@@ -158,9 +132,14 @@ func GenerateJavaFontSetup(c ft.Collection, cfg sysconfig.Config) error {
 	}
 
 	for _, path := range paths {
-		err := overwriteOrRemoveFile(filepath.Join(path, "fontconfig.SUSE.properties"), []byte(text))
+		f, err := os.OpenFile(filepath.Join(path, "fontconfig.SUSE.properties"), os.O_RDWR|os.O_CREATE, 0755)
 		if err != nil {
-			return err
+			panic(err)
+		}
+		defer f.Close()
+		err = tmpl.Execute(f, fonts)
+		if err != nil {
+			panic(err)
 		}
 	}
 

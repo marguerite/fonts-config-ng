@@ -4,10 +4,49 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/marguerite/fonts-config-ng/sysconfig"
 )
+
+type FamilyPreferLists []FamilyPreferList
+
+type FamilyPreferList struct {
+	GenericName string
+	List        OrderedList
+}
+
+func NewFamilyPreferList(name string, list ...string) FamilyPreferList {
+	return FamilyPreferList{name, NewOrderedList(list...)}
+}
+
+type OrderedList []Ordered
+
+type Ordered struct {
+	Order int
+	Item  string
+}
+
+func (ord OrderedList) Len() int {
+	return len(ord)
+}
+
+func (ord OrderedList) Less(i, j int) bool {
+	return ord[i].Order < ord[j].Order
+}
+
+func (ord OrderedList) Swap(i, j int) {
+	ord[i], ord[j] = ord[j], ord[i]
+}
+
+func NewOrderedList(list ...string) (ord OrderedList) {
+	for i := 0; i < len(list); i++ {
+		ord = append(ord, Ordered{i, list[i]})
+	}
+	sort.Sort(ord)
+	return ord
+}
 
 func fixFamilyName(name string) string {
 	// remove comma and the rest of the family string #bsc998300
